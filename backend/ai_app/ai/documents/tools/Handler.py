@@ -6,8 +6,8 @@ import json
 from datetime import datetime
 
 sys.path.append(r'D:\Rushal\VS_code\Python\ProjectIII\backend')
-from ai.documents.tools.connection import get_db_cursor
-from ai.utils.embeddings import embed_text_local
+from ai_app.ai.documents.tools.connection import get_db_cursor
+from ai_app.ai.utils.embeddings import embed_text_local
 
 # os.chdir(r'D:\Rushal\VS_code\Python\ProjectIII\backend\ai\documents\created_doc')
 

@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bot, LoaderCircle, Send, UserRound } from "lucide-react";
-import { sendChatMessage } from "../services/api";
+import { ArrowLeft, Bot, LoaderCircle, Play, Send, UserRound } from "lucide-react";
+import {
+  createChatSession,
+  prefetchInterviewQuestions,
+  sendChatMessage,
+  startChatInterview,
+} from "../services/api";
 
 export default function Interview() {
   const { state } = useLocation();
@@ -9,13 +14,63 @@ export default function Interview() {
   const messagesEndRef = useRef(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [hasStarted, setHasStarted] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
+  const [sessionId, setSessionId] = useState(state?.sessionId || null);
+
+  const latestAssistantId = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant")?.id;
+
+  useEffect(() => {
+    if (!hasStarted || !latestAssistantId || !sessionId) return;
+    prefetchInterviewQuestions(sessionId).catch(() => {});
+  }, [hasStarted, latestAssistantId, sessionId]);
+
+  const handleStart = async () => {
+    if (isSending || hasStarted) return;
+
+    setError("");
+    setIsSending(true);
+    try {
+      const activeSessionId =+
+        sessionId ||
+        (
+          await createChatSession(
+            `${state.difficulty} Interview`,
+            "interview_assessment",
+            state.difficultyId,
+          )
+        ).id;
+      setSessionId(activeSessionId);
+
+      const response = await startChatInterview(activeSessionId);
+      console.log("response : ",response)
+      const opening = response.message?.assistant_content;
+      if (!opening) {
+        setError("The interview could not create its opening question.");
+        return;
+      }
+      setMessages([{ id: response.message.id, role: "assistant", content: opening }]);
+      setHasStarted(true);
+    } catch (requestError) {
+      setError(
+        (requestError.response?.status === 401 &&
+          "Your login has expired. Please log in and try starting the interview again.") ||
+          requestError.response?.data?.error ||
+          requestError.response?.data?.detail ||
+          "The interview could not start right now. Please try again.",
+      );
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleSend = async (event) => {
     event.preventDefault();
     const content = input.trim();
-    if (!content || isSending) return;
+    if (!content || isSending || !hasStarted) return;
 
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", content }]);
     setInput("");
@@ -23,7 +78,7 @@ export default function Interview() {
     setIsSending(true);
 
     try {
-      const response = await sendChatMessage(content, state.sessionId);
+      const response = await sendChatMessage(content, sessionId);
       const assistantContent = response.message?.assistant_content;
       if (assistantContent) {
         setMessages((current) => [...current, {
@@ -45,7 +100,7 @@ export default function Interview() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
 
-  if (!state?.sessionId) {
+  if (!state?.difficultyId) {
     return <Navigate to="/interview-setup" replace />;
   }
 
@@ -78,6 +133,8 @@ export default function Interview() {
 .interview-transcript::-webkit-scrollbar { display: none; }
         .interview-empty { max-width: 570px; margin: 70px auto; text-align: center; color: #C2C4EC; line-height: 1.6; }
         .interview-empty strong { display: block; margin-bottom: 8px; color: #FBFAFF; font-size: 18px; }
+        .interview-start { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; padding: 11px 16px; border: 0; border-radius: 8px; background: #45E0D0; color: #10152B; font-weight: 700; cursor: pointer; }
+        .interview-start:disabled { cursor: wait; opacity: .55; }
         .interview-message { display: flex; gap: 12px; margin: 0 0 18px; }
         .interview-message.user { justify-content: flex-end; }
         .interview-avatar { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #45E0D0; color: #10152B; }
@@ -111,8 +168,15 @@ export default function Interview() {
         <main className="interview-transcript">
           {!messages.length && !isSending && (
             <div className="interview-empty">
-              <strong>Interview has started.</strong>
-              Please send <b>ready</b> when you are ready.
+              <strong>Ready when you are.</strong>
+              <button
+                className="interview-start"
+                type="button"
+                onClick={handleStart}
+                disabled={isSending}
+              >
+                <Play size={16} /> Start interview
+              </button>
             </div>
           )}
           {messages.map((message) => (
@@ -127,12 +191,14 @@ export default function Interview() {
           <div ref={messagesEndRef} />
         </main>
 
-        <form className="interview-composer" onSubmit={handleSend}>
-          <input className="interview-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Send a message..." disabled={isSending} />
-          <button className="interview-send" type="submit" disabled={isSending || !input.trim()}>
-            <Send size={16} /><span className="interview-send-label">Send</span>
-          </button>
-        </form>
+        {hasStarted && (
+          <form className="interview-composer" onSubmit={handleSend}>
+            <input className="interview-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Your answer..." disabled={isSending} />
+            <button className="interview-send" type="submit" disabled={isSending || !input.trim()}>
+              <Send size={16} /><span className="interview-send-label">Send</span>
+            </button>
+          </form>
+        )}
         {error && <p className="interview-error">{error}</p>}
       </div>
     </div>

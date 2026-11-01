@@ -4,9 +4,9 @@ import axios from "axios";
 // AXIOS CLIENT
 // =====================================================
 
-const client = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
-});
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const client = axios.create({ baseURL });
+let refreshRequest = null;
 
 
 // =====================================================
@@ -28,6 +28,45 @@ client.interceptors.request.use(
   (error) => {
     return Promise.reject(error);
   }
+);
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry
+    ) {
+      return Promise.reject(error);
+    }
+
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+    try {
+      refreshRequest ||= axios
+        .post(`${baseURL}/accounts/token/refresh/`, { refresh: refreshToken })
+        .then((response) => response.data.access)
+        .finally(() => {
+          refreshRequest = null;
+        });
+
+      const accessToken = await refreshRequest;
+      localStorage.setItem("accessToken", accessToken);
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      return client(originalRequest);
+    } catch (refreshError) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("currentUser");
+      return Promise.reject(refreshError);
+    }
+  },
 );
 
 
@@ -92,6 +131,18 @@ export async function sendChatMessage(userContent, sessionId = null) {
     payload
   );
 
+  return res.data;
+}
+
+
+export async function startChatInterview(sessionId) {
+  const res = await client.post(`/chats/session/${sessionId}/start-interview/`);
+  return res.data;
+}
+
+
+export async function prefetchInterviewQuestions(sessionId) {
+  const res = await client.post(`/chats/session/${sessionId}/prefetch-questions/`);
   return res.data;
 }
 

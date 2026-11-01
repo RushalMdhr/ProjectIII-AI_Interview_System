@@ -13,11 +13,6 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             'session',
             'user_content',
             'assistant_content',
-            'question_text',
-            'question_answer',
-            'question_difficulty',
-            'evaluation_rating',
-            'evaluation_feedback',
             'created_at',
         ]
         read_only_fields = [

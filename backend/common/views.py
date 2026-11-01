@@ -9,8 +9,8 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import *
-from ai.utils.embeddings import embed_text
-from ai.llm import ai
+from ai_app.ai.utils.embeddings import embed_text
+from ai_app.ai.llm import ai
 
 
 def health_check(request):

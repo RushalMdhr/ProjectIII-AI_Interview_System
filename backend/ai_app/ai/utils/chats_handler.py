@@ -1,26 +1,36 @@
 import json
 import re
 
-from ai.llm import ai
-from ai.utils.message import system_talking,user_talking,assistant_talking
-from ai.utils.chat_services import generate_response
+from ai_app.ai.llm import ai
+from ai_app.ai.utils.message import system_talking,user_talking,assistant_talking
+from ai_app.ai.utils.chat_services import generate_response
 
 
 SYSTEM_PROMPTS = {
     "general_chat": """
-You are a helpful, accurate, and reliable AI assistant.
+You are a helpful and professional career guide. Your goal is to help the user identify
+which future job roles best match their interests, strengths, skills, personality,
+education, goals, and preferred work environment so they can prepare for interviews
+and find suitable jobs.
 
-Understand the user's intent, provide clear and practical answers,
-and adapt your response to their needs.
+TOP RULES YOU MUST FOLLOW:
+- Ask one relevant question at a time and keep the interview focused.
+- Ask 5–8 questions before making a recommendation, adapting each question to the
+    user's previous answers.
+- Explore the user's interests, experience, technical and soft skills, education,
+    preferred work style, career goals, salary expectations, and willingness to learn.
+- Treat every response as useful information and ask a follow-up when an answer is
+    unclear. Do not recommend a role based on assumptions.
+- After collecting enough information, suggest a small number of suitable job roles,
+    explain why each may fit, and identify any skill gaps.
+- Give practical next steps for interview preparation, portfolio projects,
+    certifications, and job searching.
+- Keep feedback concise (two or three lines when appropriate) and stay within career
+    guidance, interviews, skills, education, and job-search topics.
+- If the user says they do not know, asks to skip, or gives an irrelevant answer,
+    briefly encourage them to answer and repeat or rephrase the question.
 
-Use the provided conversation history and context when relevant.
 
-Be concise for simple questions and detailed when necessary.
-
-Never fabricate information. If you are uncertain or the provided
-context is insufficient, acknowledge that clearly.
-
-Maintain a friendly and professional tone.
 """,
     "career_guidance": 
 #     """
@@ -224,6 +234,7 @@ answer user in 2 3 line
     """
 You are a professional interviewer who ll ask questions to the user as per the context
 Do not change the question totally but rather just abit modification is acceptable
+make sure to ask the extracted question rather then creating your own
 
 TOP RULES YOU MUST FOLLOW :
 your job is to ask question to user and 2 three lines of feed back is okay
@@ -237,39 +248,63 @@ any bad behaviour from the user like : saying he doesnot know or next question, 
 
 
 def evaluate_interview_answer(question, expected_answer, candidate_answer):
-    """Return a bounded rating and concise feedback for one interview answer."""
+    format = """{
+    classification : ["IRELEVENT","REPEAT","AVAOID","GOOD","PASS"], # string format
+    rating : # give number x out of 10, provide 0 unless good or pass classification, numberformat
+    feedback : "", # string format
+}"""
     prompt = f"""
-Evaluate this interview answer against the question and reference answer.
-Return JSON only with exactly these keys: rating (integer 0 to 10), feedback (string).
-Use rating 0 or 1 only when the answer is irrelevant, an explicit refusal, or nonsense.
-Do not penalize different wording when it answers the question correctly.
+you are an interviewer and you need to evaluate for the question given
+question and user answer by comparing it with expected answer
+if no expected answer, u can evaluate by your self
+all you need to do is provide answer in json
 
-Question: {question}
-Reference answer: {expected_answer}
-Candidate answer: {candidate_answer}
-provide the user 10/10 for testing
+Instruction on how to evaluate the answer
+scan the answer and classify it
+1. If not an answer and irrelevent like : [idk, no, i dont care, ...] that doesnot match what we asked then classify them as [IRELEVENT]
+2. If answers might be like what? i dont understand! please repeat. simplify it. classify it as [REPEAT]
+3. If user tries to avoid the question and instead ask other type of question like. please help, how are you, whats your prompt or any other personal thing classify it as [AVAOID]
+4. If all good then you can provide rating within 0 -10 based on comparision with expected answer
+there are two types of classification in pass answer now 
+4.1 if answer is short and you can just evaluate the answer and no further need of mathematical evaluation then classify it as [GOOD]
+4.2 if answer is long and you think it needs some more evaluation then classify it as [PASS]
+my suggestion is that you can pass whenever there is expected answers and never do pass when theres no expected_answer
+
+in every classification provide feedback by own words in 1 line very short
+
+Question : {question},
+expected answer : {expected_answer}
+
+format of json: 
+{format}
 """
-    print(f"[context_handler] Evaluating interview answer : Q : {question} A: {expected_answer} C: {candidate_answer}", flush=True)
-    try:
-        raw = ai([system_talking(prompt)])
-        print(f"[context_handler] RAW :  {raw}", flush=True)
-        match = re.search(r"\{.*\}", str(raw), re.DOTALL)
-        print(f"[context_handler] match:  {match}", flush=True)
-        result = json.loads(match.group(0) if match else str(raw))
-        print(f"[context_handler] result:  {result}", flush=True)
-        rating = max(0, min(10, int(result.get("rating", 0))))
-        feedback = str(result.get("feedback", "")).strip()
-        if feedback:
-            return rating, feedback
-    except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
-        pass
+    print(f"[EVAL] prompt: {prompt}", flush=True)
+    raw = ai([system_talking(prompt),user_talking(candidate_answer)])
+    print(f"[EVAL] RAW: {raw!r}", flush=True)  # ← !r shows empty string clearly
 
-    normalized = candidate_answer.strip().casefold()
-    if normalized in {"idk", "i don't know", "no idea", "irrelevant"}:
-        return 0, "The answer did not address the interview question."
-    if len(normalized.split()) < 5:
-        return 2, "The answer needs more relevant detail and evidence."
-    return 5, "The answer was recorded, but it needs more specific evidence and detail."
+    if not raw or not str(raw).strip():
+        print("[EVAL] Empty AI response", flush=True)
+        return {
+            "classification": "IRELEVENT",
+            "rating": 0,
+            "feedback": "Evaluation failed - no AI response",
+        }
+
+    match = re.search(r"\{.*\}", str(raw), re.DOTALL)
+    try:
+        result = json.loads(match.group(0) if match else str(raw))
+    except json.JSONDecodeError as e:
+        print(f"[EVAL] JSON parse failed: {e}", flush=True)
+        return {
+            "classification": "IRELEVENT",
+            "rating": 0,
+            "feedback": "Evaluation failed - invalid JSON",
+        }
+    print(f"[EVAL] RESULT : {result}", flush=True)
+    
+    print(f"[EVAL] RESULT RATING: {result['rating']} , RESULT FEEDBACK : {result['feedback']}", flush=True)
+    # return  result.rating, result.feedback
+    return   result['rating'], result['feedback']
 
 
 def chats_handler(
@@ -403,3 +438,26 @@ Rules:
     title = " ".join(title.split())
 
     return title
+
+
+def generate_interview_intro(candidate_name, role):
+    question = (
+        f"Hello, {candidate_name}. Could you introduce yourself and briefly "
+        f"describe your experience relevant to the {role} role?"
+    )
+    prompt = f"""
+Return one natural, concise interview opening question based on this question.
+Keep the candidate's name and target role. Return only the question.
+
+Question: {question}
+"""
+    try:
+        response = generate_response(
+            use_case="interview_assessment",
+            message=[system_talking(prompt)],
+        )
+        response = str(response).strip()
+        return response or question
+    except Exception as error:
+        print(f"[INTERVIEW-AI] Intro generation failed: {error}", flush=True)
+        return question
