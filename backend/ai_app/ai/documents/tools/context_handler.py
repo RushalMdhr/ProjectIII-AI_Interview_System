@@ -339,6 +339,7 @@ def _retrieve_questions(session, role, query_embedding, top_k, candidate_ids=Non
 			ORDER BY iq.embedding <=> %s::vector
 			LIMIT %s;
 		""", params)
+		print("[ FETCHING NEXT QUESTION ] : ",flush=True)
 		return cur.fetchall()
 
 

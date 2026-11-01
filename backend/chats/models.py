@@ -79,9 +79,10 @@ class InterviewFeedback(models.Model):
         related_name='interview_feedbacks'
     )
     asked_questions = models.ForeignKey(InterviewQuestions, null=True, on_delete=models.SET_NULL)
-    question_text = models.TextField(blank=True)
-    question_answer = models.TextField(blank=True)
-    candidate_answer = models.TextField(blank=True)
+    question_text = models.TextField(blank=True) #hamro question sodheko wala
+    question_answer = models.TextField(blank=True) # expected answer from the question
+    candidate_answer = models.TextField(blank=True) # answer from the candidate
+    
     # question_number = models.PositiveSmallIntegerField(null=True, blank=True)
     # message = models.ForeignKey(
     #     ChatMessage,
