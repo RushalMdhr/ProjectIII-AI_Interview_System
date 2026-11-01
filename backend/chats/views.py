@@ -44,15 +44,15 @@ def _update_interview_level(session, rating):
     )
 
 
-def _create_question_attempt(session, message, question):
+def _create_question_attempt(session, question):
     return InterviewFeedback.objects.create(
         session=session,
-        message=message,
+        # message="111",
         # yo sab chai interview feed back ko field ho ra i think its a private call so its used for creation
         asked_questions_id=question.get("id"),
         question_text=question["question"],
-        question_answer=question.get("answer", ""),
-        question_number=session.question_count + 1,
+        question_answer="",
+        # question_number=session.question_count + 1,
         question_difficulty=question.get("difficulty", session.current_difficulty),
     )
 
@@ -75,10 +75,15 @@ def start_interview(request, session_id):
 
     print("[ START_INTERVIEW ]session id : ",session_id,flush=True)
     
+    # existing_attempt = session.interview_feedbacks.filter(
+    #     answer_message__isnull=True,
+    #     rating__isnull=True,
+    # ).select_related("message").order_by("-created_at").first() # message id fetch garxa jasma recent question hunxa
+    print("[ START_INTERVIEW ]feedback : ",session_id,flush=True)
     existing_attempt = session.interview_feedbacks.filter(
-        answer_message__isnull=True,
+        candidate_answer__isnull=True,
         rating__isnull=True,
-    ).select_related("message").order_by("-created_at").first() # message id fetch garxa jasma recent question hunxa
+    ).order_by("-created_at").first() # message id fetch garxa jasma recent question hunxa
     if existing_attempt:
         return Response(
             {
@@ -99,27 +104,37 @@ def start_interview(request, session_id):
     session.interview_role = role
     candidate_name = request.user.first_name.strip() or request.user.username
     opening_question = generate_interview_intro(candidate_name, role)
-    message = ChatMessage.objects.create(
-        session=session,
-        user=request.user,
-        assistant_content=opening_question,
-    )
+    # message = ChatMessage.objects.create(
+    #     session=session,
+    #     user=request.user,
+    #     assistant_content=opening_question,
+    # )
+    message = {
+        'session': session.id,          # ← int, not object
+        'user': request.user.id,        # ← int, not object
+        "assistant_content": opening_question,
+    }
+    print("[ START_INTERVIEW ]opening question : ",opening_question,flush=True)
+
     _create_question_attempt(
         session,
-        message,
+        # message,
         {
             "question": opening_question,
             "answer": "",
             "difficulty": session.current_difficulty,
         },
     )
-    session.question_count = 1
-    session.save(update_fields=["interview_role", "question_count", "updated_at"])
+    # session.question_count = 1
+    # session.save(update_fields=["interview_role", "question_count", "updated_at"])
+    session.save(update_fields=["interview_role", "updated_at"])
+
+    print("[ START_INTERVIEW ]feedback : ",session_id,flush=True)
 
     return Response(
         {
             "session": ChatSessionSerializer(session).data,
-            "message": ChatMessageSerializer(message).data,
+            "message": message
         },
         status=status.HTTP_201_CREATED,
     )
@@ -156,11 +171,11 @@ def _send_interview_answer(request, session, user_content):
         return Response({"error": "This interview has been halted."}, status=status.HTTP_409_CONFLICT)
 
     attempt = session.interview_feedbacks.filter(
-        answer_message__isnull=True,
+        candidate_answer__isnull=True,
         rating__isnull=True,
     ).select_related("asked_questions").order_by("-created_at").first()
     if not attempt:
-        print("[Message _ Interview] : no attempt : ",flush=True)
+        print("[ MESSAGE INTERVIEW ] : no attempt : ",flush=True)
         return Response(
             {"error": "Start the interview before submitting an answer."},
             status=status.HTTP_409_CONFLICT,

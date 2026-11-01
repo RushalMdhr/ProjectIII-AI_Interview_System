@@ -81,19 +81,20 @@ class InterviewFeedback(models.Model):
     asked_questions = models.ForeignKey(InterviewQuestions, null=True, on_delete=models.SET_NULL)
     question_text = models.TextField(blank=True)
     question_answer = models.TextField(blank=True)
-    question_number = models.PositiveSmallIntegerField(null=True, blank=True)
-    message = models.ForeignKey(
-        ChatMessage,
-        on_delete=models.CASCADE,
-        related_name='interview_feedbacks'
-    )
-    answer_message = models.ForeignKey(
-        ChatMessage,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='interview_answers',
-    )
+    candidate_answer = models.TextField(blank=True)
+    # question_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    # message = models.ForeignKey(
+    #     ChatMessage,
+    #     on_delete=models.CASCADE,
+    #     related_name='interview_feedbacks'
+    # )
+    # answer_message = models.ForeignKey(
+    #     ChatMessage,
+    #     null=True,
+    #     blank=True,
+    #     on_delete=models.SET_NULL,
+    #     related_name='interview_answers',
+    # )
     prefetched_question_ids = models.JSONField(default=list, blank=True)
     rating = models.PositiveSmallIntegerField(null=True, blank=True)
     feedback = models.TextField(blank=True, null=True)
@@ -103,7 +104,7 @@ class InterviewFeedback(models.Model):
     question_difficulty = models.CharField(max_length=10, blank=True, null=True)
 
     class Meta:
-        unique_together = ('session', 'message')
+        unique_together = ('session','asked_questions')
 
     def __str__(self):
         return f"Feedback {self.id} - Session {self.session_id} - Message {self.message_id}"

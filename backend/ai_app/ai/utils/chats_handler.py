@@ -447,6 +447,7 @@ def generate_interview_intro(candidate_name, role):
     )
     prompt = f"""
 Return one natural, concise interview opening question based on this question.
+dont add anything like assistent or ai thing just message like real interviewer
 Keep the candidate's name and target role. Return only the question.
 
 Question: {question}
@@ -454,9 +455,10 @@ Question: {question}
     try:
         response = generate_response(
             use_case="interview_assessment",
-            message=[system_talking(prompt)],
+            message=[system_talking(prompt),user_talking('ready')],
         )
         response = str(response).strip()
+        print("[OPEING ANSWER GENERATION] : ",response)
         return response or question
     except Exception as error:
         print(f"[INTERVIEW-AI] Intro generation failed: {error}", flush=True)
