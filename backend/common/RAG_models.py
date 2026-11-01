@@ -1,6 +1,5 @@
 from django.db import models
-from pgvector.django import VectorField
-from chats.models import ChatSession, ChatMessage
+from pgvector.django import VectorField, HnswIndex
 
 
 class Document_Source(models.Model):
@@ -33,16 +32,17 @@ class InterviewQuestions(models.Model):
     embedding = VectorField(dimensions=768, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            HnswIndex(
+                name='interview_embedding_idx',
+                fields=['embedding'],
+                opclasses=['vector_cosine_ops'],
+                m=16,
+                ef_construction=64,
+            ),
+        ]
+
     def __str__(self):
         return self.question[:50]
 
-class AskedQuestions(models.Model):
-    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='asked_questions')
-    question = models.ForeignKey(InterviewQuestions, on_delete=models.CASCADE)
-    asked_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('session', 'question')
-
-    def __str__(self):
-        return f"Session {self.session.id} - Question {self.question.id}"

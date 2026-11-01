@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'common',
     'accounts',
     'chats',
+    'ai_app',
 ]
 AUTH_USER_MODEL='accounts.User'
 

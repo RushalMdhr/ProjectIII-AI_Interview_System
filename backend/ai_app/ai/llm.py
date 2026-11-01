@@ -1,4 +1,4 @@
-from ai.utils.request_ollama import ollama_client
+from ai_app.ai.utils.request_ollama import ollama_client
 from .utils.request_groq import groq_client
 
 def ai(msg,model="llama3.2:latest",tools='auto'):

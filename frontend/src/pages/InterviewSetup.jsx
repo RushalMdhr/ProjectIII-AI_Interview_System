@@ -6,7 +6,6 @@ import {
   Wind,
   Zap,
 } from "lucide-react";
-import { createChatSession } from "../services/api";
 
 export const MAX_QUESTIONS_BY_DIFFICULTY = {
   easy: 5,
@@ -112,38 +111,16 @@ export default function InterviewSetup() {
 
   const [role, setRole] = useState("");
   const [hovered, setHovered] = useState(null);
-  const [isStarting, setIsStarting] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleDifficulty = async (difficulty) => {
-    if (isStarting) return;
-
-    setIsStarting(true);
-    setError("");
-
-    try {
-      const session = await createChatSession(
-        `${difficulty.label} Interview`,
-        "interview_assessment",
-        difficulty.id,
-      );
-
-      navigate("/interview", {
-        state: {
-          role,
-          difficulty: difficulty.label,
-          questionCount: difficulty.questions,
-          sessionId: session.id,
-        },
-      });
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.error ||
-          "Could not start the interview. Please try again.",
-      );
-    } finally {
-      setIsStarting(false);
-    }
+  const handleDifficulty = (difficulty) => {
+    navigate("/interview", {
+      state: {
+        role,
+        difficulty: difficulty.label,
+        difficultyId: difficulty.id,
+        questionCount: difficulty.questions,
+      },
+    });
   };
 
   return (
@@ -346,13 +323,10 @@ export default function InterviewSetup() {
                   onHover={() => setHovered(difficulty.id)}
                   onLeave={() => setHovered(null)}
                   onClick={() => handleDifficulty(difficulty)}
-                  disabled={isStarting}
                 />
               ))}
 
           </div>
-
-          {error && <p className="setup-error">{error}</p>}
 
         </div>
 
