@@ -78,7 +78,7 @@ def start_interview(request, session_id):
     existing_attempt = session.interview_feedbacks.filter(
         answer_message__isnull=True,
         rating__isnull=True,
-    ).select_related("message").order_by("-created_at").first()
+    ).select_related("message").order_by("-created_at").first() # message id fetch garxa jasma recent question hunxa
     if existing_attempt:
         return Response(
             {
@@ -88,7 +88,7 @@ def start_interview(request, session_id):
             status=status.HTTP_200_OK,
         )
 
-    profile = UserProfile.objects.filter(user=request.user).only("target_role").first()
+    profile = UserProfile.objects.filter(user=request.user).only("target_role").first() # fetched the target role for asking
     role = (profile.target_role if profile else "").strip()
     if not role:
         return Response(
@@ -300,15 +300,26 @@ def sessions(request):
         title = request.data.get(
             'title',
             'New Chat Session')
-        interview_difficulty = request.data.get(
-            'interview_difficulty',
-            'medium',
-        )
-        if interview_difficulty not in INTERVIEW_LIMITS:
-            return Response(
-                {'error': 'Invalid interview difficulty.'},
-                status=status.HTTP_400_BAD_REQUEST,
+        print(f"[INTERVIEW SESSION CREATING] CHECKING ROLES : ",use_case,flush=True)
+        if use_case == "interview_assessment":
+            print(f"[I M IN] CHECKING ROLES")
+            profile = UserProfile.objects.filter(user=request.user).only("target_role").first() # fetched the target role for asking
+            role = (profile.target_role if profile else "").strip()
+            if not role:
+                return Response(
+                    {"error": "Add your target role to your profile before starting an interview."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            interview_difficulty = request.data.get(
+                'interview_difficulty',
+                'medium',
             )
+            if interview_difficulty not in INTERVIEW_LIMITS:
+                return Response(
+                    {'error': 'Invalid interview difficulty.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         session = ChatSession.objects.create(
             user=request.user,
             use_case=use_case,
