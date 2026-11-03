@@ -21,6 +21,7 @@ import ReactMarkdown from "react-markdown";
 export default function AskQuestion() {
   const navigate = useNavigate();
   const [input, setInput] = useState("");
+  const inputRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [sessions, setSessions] = useState([]);
@@ -30,6 +31,15 @@ export default function AskQuestion() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
+  }, [input]);
 
   useEffect(() => {
     const loadSessions = async () => {
@@ -310,8 +320,9 @@ export default function AskQuestion() {
 
         <div className="ask-input-area">
           <div className="ask-input-box">
-            <input
-              type="text"
+            <textarea
+              ref={inputRef}
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
