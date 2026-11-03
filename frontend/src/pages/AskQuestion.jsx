@@ -22,6 +22,7 @@ export default function AskQuestion() {
   const navigate = useNavigate();
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
+  const wasSendingRef = useRef(false);
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [sessions, setSessions] = useState([]);
@@ -40,6 +41,14 @@ export default function AskQuestion() {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`;
     textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
   }, [input]);
+
+  useEffect(() => {
+    if (wasSendingRef.current && !isSending) {
+      inputRef.current?.focus();
+    }
+
+    wasSendingRef.current = isSending;
+  }, [isSending]);
 
   useEffect(() => {
     const loadSessions = async () => {

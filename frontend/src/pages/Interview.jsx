@@ -13,6 +13,7 @@ export default function Interview() {
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const wasSendingRef = useRef(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [hasStarted, setHasStarted] = useState(false);
@@ -76,6 +77,14 @@ export default function Interview() {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`;
     textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
   }, [input]);
+
+  useEffect(() => {
+    if (wasSendingRef.current && !isSending) {
+      inputRef.current?.focus();
+    }
+
+    wasSendingRef.current = isSending;
+  }, [isSending]);
 
   const handleSend = async (event) => {
     event.preventDefault();
