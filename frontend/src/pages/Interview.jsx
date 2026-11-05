@@ -433,12 +433,14 @@ export default function Interview() {
 
         {hasStarted && (
           <form className="interview-composer" onSubmit={handleSend}>
+            {/* Remove onPaste below to allow pasting again. */}
             <textarea
               ref={inputRef}
               className="interview-input"
               rows={1}
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onPaste={(event) => event.preventDefault()}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
