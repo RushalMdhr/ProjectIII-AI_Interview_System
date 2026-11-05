@@ -88,8 +88,14 @@ def start_interview(request, session_id):
             status=status.HTTP_200_OK,
         )
 
-    profile = UserProfile.objects.filter(user=request.user).only("target_role").first()
-    role = (profile.target_role if profile else "").strip()
+    profile = (
+        UserProfile.objects.filter(user=request.user)
+        .only("primary_role", "target_roles")
+        .first()
+    )
+    role = ""
+    if profile:
+        role = (profile.primary_role or (profile.target_roles or [""])[0]).strip()
     if not role:
         return Response(
             {"error": "Add your target role to your profile before starting an interview."},

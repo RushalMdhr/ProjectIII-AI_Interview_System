@@ -15,7 +15,7 @@ class InterviewFlowTests(TestCase):
 			email="candidate@example.test",
 			password="test-password",
 		)
-		UserProfile.objects.create(user=self.user, target_role="Software Engineer")
+		UserProfile.objects.create(user=self.user, primary_role="Backend Developer")
 		self.session = ChatSession.objects.create(
 			user=self.user,
 			use_case="interview_assessment",

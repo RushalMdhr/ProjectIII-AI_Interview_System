@@ -304,8 +304,14 @@ def _role_for_session(user, session):
 	if session.interview_role:
 		return session.interview_role
 
-	profile = UserProfile.objects.filter(user=user).only("target_role").first()
-	role = profile.target_role.strip() if profile and profile.target_role else ""
+	profile = (
+		UserProfile.objects.filter(user=user)
+		.only("primary_role", "target_roles")
+		.first()
+	)
+	role = ""
+	if profile:
+		role = (profile.primary_role or (profile.target_roles or [""])[0]).strip()
 	if role:
 		session.interview_role = role
 		session.save(update_fields=["interview_role", "updated_at"])
