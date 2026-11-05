@@ -1,3 +1,5 @@
+import re
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -29,6 +31,7 @@ INTERVIEW_LIMITS = {
 }
 
 DIFFICULTY_LEVELS = {"easy": 0, "medium": 1, "hard": 2}
+MINIMUM_INTERVIEW_ANSWER_WORDS = 3
 
 
 def _update_interview_level(session, rating):
@@ -158,6 +161,15 @@ def prefetch_interview_questions(request, session_id):
 
 
 def _send_interview_answer(request, session, user_content):
+    word_count = len(
+        re.findall(r"[^\W\d_]+(?:['’][^\W\d_]+)*", user_content, flags=re.UNICODE)
+    )
+    if word_count < MINIMUM_INTERVIEW_ANSWER_WORDS:
+        return Response(
+            {"error": "Please enter an answer of at least 3 words. Your message was not sent."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     if session.halted:
         return Response({"error": "This interview has been halted."}, status=status.HTTP_409_CONFLICT)
 

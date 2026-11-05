@@ -26,6 +26,36 @@ class InterviewFlowTests(TestCase):
 		self.client = APIClient()
 		self.client.force_authenticate(user=self.user)
 
+	def test_short_interview_answers_are_rejected_before_ai_processing(self):
+		question_message = ChatMessage.objects.create(
+			session=self.session,
+			user=self.user,
+			assistant_content="Please introduce yourself.",
+		)
+		InterviewFeedback.objects.create(
+			session=self.session,
+			message=question_message,
+			question_text="Please introduce yourself.",
+		)
+
+		with (
+			patch("chats.views.evaluate_interview_answer") as evaluate_answer,
+			patch("chats.views.embed_text") as create_embedding,
+		):
+			for answer in ("next", "jzaz<", "I am"):
+				response = self.client.post(
+					reverse("send_message"),
+					{"session": self.session.id, "user_content": answer},
+					format="json",
+				)
+
+				self.assertEqual(response.status_code, 400)
+				self.assertIn("at least 3 words", response.data["error"])
+
+		evaluate_answer.assert_not_called()
+		create_embedding.assert_not_called()
+		self.assertEqual(ChatMessage.objects.filter(session=self.session).count(), 1)
+
 	@patch("chats.views.generate_interview_intro", return_value="Please introduce yourself.")
 	def test_start_prefetch_and_answer_create_linked_attempts(self, _generate_intro):
 		start_url = reverse("start_interview", kwargs={"session_id": self.session.id})
