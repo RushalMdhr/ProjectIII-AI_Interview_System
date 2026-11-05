@@ -1,6 +1,14 @@
 import json
 from urllib.parse import urlencode
 
+import logging
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -21,6 +29,7 @@ from .models import UserProfile
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # =========================================================
@@ -392,6 +401,68 @@ def login_account(request):
 # =========================================================
 # GET PROFILE
 # =========================================================
+@api_view(['POST'])
+def request_password_reset(request):
+    email = (request.data.get('email') or '').strip()
+    form = PasswordResetForm(data={'email': email})
+
+    if not form.is_valid():
+        return Response({
+            'message': 'Enter a valid email address.'
+        }, status=400)
+
+    for user in form.get_users(email):
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = (
+            f"{settings.FRONTEND_URL.rstrip('/')}/reset-password/{uid}/{token}"
+        )
+        try:
+            send_mail(
+                'Reset your password',
+                f'Use this link to reset your password: {reset_url}',
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception:
+            logger.exception('Could not send password reset email.')
+            return Response({
+                'message': 'Could not send the reset email. Please try again later.'
+            }, status=503)
+
+    return Response({
+        'message': 'If an account exists for that email, a password reset link has been sent.'
+    })
+
+
+@api_view(['POST'])
+def confirm_password_reset(request):
+    uid = request.data.get('uid', '')
+    token = request.data.get('token', '')
+    password = request.data.get('password', '')
+
+    if not isinstance(password, str) or not password:
+        return Response({'message': 'Enter a new password.'}, status=400)
+
+    try:
+        user_id = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=user_id)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return Response({'message': 'This reset link is invalid or has expired.'}, status=400)
+
+    if not default_token_generator.check_token(user, token):
+        return Response({'message': 'This reset link is invalid or has expired.'}, status=400)
+
+    try:
+        validate_password(password, user)
+    except ValidationError as error:
+        return Response({'message': ' '.join(error.messages)}, status=400)
+
+    user.set_password(password)
+    user.save(update_fields=['password'])
+    return Response({'message': 'Your password has been updated. You can now log in.'})
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
