@@ -11,6 +11,7 @@ import Results from "./pages/Results";
 import Test from "./pages/test";
 import AskQuestion from "./pages/AskQuestion";
 import UserProfile from "./pages/UserProfile";
+import OAuthCallback from "./pages/OAuthCallback";
 function App() {
   return (
     <BrowserRouter>
@@ -21,6 +22,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/interview-setup" element={<InterviewSetup />} />
