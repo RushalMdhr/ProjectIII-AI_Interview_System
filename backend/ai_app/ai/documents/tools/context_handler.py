@@ -99,7 +99,7 @@ def _retrieve_questions(session, role, top_k, candidate_ids=None, match_difficul
 		cur.execute(f"""
 			SELECT
 				iq.id, iq.question, iq.answer, iq.role, iq.experience,
-				iq.difficulty, iq.keywords, iq.source_id
+				iq.difficulty, iq.keywords, iq.source_id, iq.weights
 			FROM common_interviewquestions iq
 			WHERE (LOWER(iq.role) = LOWER(%s) OR LOWER(iq.role) = 'common')
 			{difficulty_filter}
@@ -127,6 +127,67 @@ def prefetch_next_questions(user, session_id, attempt, top_k=3):
 	return {"status": "success", "question_ids": attempt.prefetched_question_ids}
 
 
+def _generate_better_response(result,prev_question,next_question,candidate_answer):
+	jod='{"action": "REPEAT | SKIP | CONTINUE ","feedback": "Natural conversational response","question": "if repeat question : Simplified previous question else next question"}'
+
+	prompt=f"""
+	You are an AI interviewer responsible for managing the interview conversation naturally and deciding the next interview action based on the candidate's response.
+
+	### INPUT VARIABLES
+
+	- Evaluation Result: {result}
+	- Previous Question: {prev_question}
+	- Next Question: {next_question}
+
+	### YOUR RESPONSIBILITIES
+
+	Determine exactly one action:
+
+	**1. REPEAT**
+	- If the candidate requests repetition, clarification, or says they couldn't understand the question.
+	- Rephrase the previous question using simpler, clearer language.
+	- Preserve the original meaning.
+	- Do not provide hints or answers.
+	- Do not move to the next question.
+
+	**2. SKIP**
+	- If the candidate explicitly requests to skip, pass, or says they don't know the answer.
+	- Respond with a short, natural acknowledgment.
+	- Proceed to the next question.
+
+	**3. CONTINUE**
+	- If the candidate has answered the question.
+	- Use the evaluation result and dimension reasons to generate one short, natural sentence of feedback or encouragement.
+	- Avoid generic compliments.
+	- Do not invent strengths that are not supported by the evaluation.
+	- Proceed to the next question.
+
+	**4. REVIEW**
+	- If suspicious_break is true and overall_score is 0.0.
+	- Do not automatically assume the candidate is cheating.
+	- Request further answer verification instead of immediately proceeding.
+	- Do not generate normal evaluation feedback.
+
+	### IMPORTANT RULES
+
+	- Never confuse a poor answer with a request to skip.
+	- A score of 0.0 alone does not indicate suspicious behavior.
+	- Candidate intent takes priority when deciding whether to repeat or skip.
+	- Keep responses conversational, short, and professional.
+	- Never expose internal evaluation scores or classification details.
+
+	### OUTPUT FORMAT
+
+	Return valid JSON only, without Markdown or additional text.
+
+	{jod}
+	"""
+	messages = [
+		{"role": "system", "content": prompt},
+		{"role": "user", "content": candidate_answer }
+		]
+	return ai(msg=messages)
+
 def get_next_questions(
 	user,
 	user_content,
@@ -134,6 +195,8 @@ def get_next_questions(
 	top_k=3,
 	candidate_ids=None,
 	session=None,
+	prev_question="",
+	result=None
 ):
 	if session is None:
 		session = ChatSession.objects.get(id=session_id, user=user, archived=False)
@@ -141,20 +204,20 @@ def get_next_questions(
 	if not role:
 		return {"status": "missing_role", "message": "Please provide your target role first."}
 
-	questions = _retrieve_questions(
+	next_question = _retrieve_questions(
 		session,
 		role,
 		top_k,
 		candidate_ids=candidate_ids,
 	)
-	print("[context_handler] questions found: ", len(questions), flush=True)
+	print("[context_handler] questions found: ", len(next_question), flush=True)
 
-	if not questions and candidate_ids:
-		questions = _retrieve_questions(session, role, top_k)
+	if not next_question and candidate_ids:
+		next_question = _retrieve_questions(session, role, top_k)
 		print("[context_handler] No questions found with candidate_ids; retried without filter", questions, flush=True)
 
-	if not questions and session.current_difficulty is not None:
-		questions = _retrieve_questions(
+	if not next_question and session.current_difficulty is not None:
+		next_question = _retrieve_questions(
 			session,
 			role,
 			top_k,
@@ -163,11 +226,13 @@ def get_next_questions(
 		print(
 			"[context_handler] No questions found at current difficulty; "
 			"retried without difficulty filter",
-			questions,
+			next_question,
 			flush=True,
 		)
 
-	if not questions:
+	
+
+	if not next_question:
 		return {
 			"status": "success",
 			"role": role,
@@ -180,11 +245,20 @@ def get_next_questions(
 				"experience": "any",
 				"difficulty": session.current_difficulty,
 				"keywords": [],
+				"weights": [],
 				"distance": None,
 			},
 		}
 
-	selected_question = questions[0]
+	selected_question = next_question[0]
+
+	demo_question = _generate_better_response(
+		result=result,
+		prev_question=prev_question,
+		next_question=selected_question,
+		candidate_answer=user_content
+		)
+
 	return {
 		"status": "success",
 		"role": role,
@@ -198,5 +272,7 @@ def get_next_questions(
 			"keywords": selected_question[6],
 			"distance": None,
 			"source_id": selected_question[7],
+			"weights": selected_question[8] or [],
+			"demo question" : demo_question
 		},
 	}
