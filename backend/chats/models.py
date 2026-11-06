@@ -9,12 +9,11 @@ class ChatSession(models.Model):
         ("hard", "Hard"),
     ]
     STATE_CHOICES = [
-        ("welcome", "WELCOME"),
-        ("warmup", "WARM_UP"),
-        ("experience", "EXPERIENCE"),
-        ("behavioral", "BEHAVIORAL"),
-        ("situational", "SITUATIONAL"),
-        ("technical", "TECHNICAL"),
+        ("introduction", "Introduction"),
+        ("experience", "Experience"),
+        ("behavioral", "Behavioral"),
+        ("situational", "Situational"),
+        ("technical", "Technical"),
     ]
     USE_CASE_CHOICES = [
         ("general_chat", "General Chat"),
@@ -29,8 +28,11 @@ class ChatSession(models.Model):
     # Interview-only fields
     interview_difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default="medium")
     current_difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default="easy")
-
-    # current_state = models.CharField(max_length=10, choices=STATE_CHOICES, default="welcome") # adding an attribute to know in which state the interview is in
+    current_state = models.CharField(
+        max_length=20,
+        choices=STATE_CHOICES,
+        default="introduction",
+    )
 
     max_questions = models.PositiveSmallIntegerField(default=8)
     question_count = models.PositiveSmallIntegerField(default=0)
@@ -86,9 +88,6 @@ class InterviewFeedback(models.Model):
     feedback = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    categories = models.JSONField(default=list, blank=True)   # list[str]  → e.g. ["behavioral"]
-    weights = models.JSONField(default=list, blank=True)   # list[dict] → [{"label": ..., "score": ...}]
     
     question_difficulty = models.CharField(max_length=10, blank=True, null=True)
 
