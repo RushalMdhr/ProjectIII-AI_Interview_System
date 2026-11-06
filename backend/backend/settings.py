@@ -92,6 +92,8 @@ DATABASES = {
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 
 STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework
@@ -111,6 +113,23 @@ REST_FRAMEWORK = {
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 GOOGLE_REDIRECT_URI = 'http://localhost:8000/accounts/google/callback/'
+FRONTEND_OAUTH_CALLBACK_URL = os.environ.get(
+    'FRONTEND_OAUTH_CALLBACK_URL',
+    'http://localhost:5173/oauth/callback',
+)
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else
+    'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
 
 from datetime import timedelta
 

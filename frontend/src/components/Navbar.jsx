@@ -25,12 +25,7 @@ function Logo() {
         cursor: "pointer",
       }}
     >
-      <svg
-        width="34"
-        height="34"
-        viewBox="0 0 40 40"
-        fill="none"
-      >
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
         <circle
           cx="20"
           cy="20"
@@ -46,12 +41,7 @@ function Logo() {
           strokeLinecap="round"
         />
 
-        <circle
-          cx="20"
-          cy="20"
-          r="6"
-          fill={tokens.teal}
-        />
+        <circle cx="20" cy="20" r="6" fill={tokens.teal} />
       </svg>
 
       <span
@@ -63,9 +53,7 @@ function Logo() {
         }}
       >
         AI
-        <span style={{ color: tokens.teal }}>
-          HELPER
-        </span>
+        <span style={{ color: tokens.teal }}>HELPER</span>
       </span>
     </button>
   );
@@ -98,6 +86,8 @@ export default function Navbar() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const profilePicture =
+    currentUser?.profile_picture || currentUser?.profile_picture_url;
 
   const handleLogout = () => {
     logout();
@@ -167,17 +157,29 @@ export default function Navbar() {
               width: 34,
               height: 34,
               borderRadius: "50%",
-              background:
-                `linear-gradient(135deg, ${tokens.gold}, ${tokens.teal})`,
+              background: `linear-gradient(135deg, ${tokens.gold}, ${tokens.teal})`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 13,
               fontWeight: 700,
               color: "#191C36",
+              overflow: "hidden",
             }}
           >
-            {initials}
+            {profilePicture ? (
+              <img
+                src={profilePicture}
+                alt={`${displayName} profile`}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              initials
+            )}
           </span>
         </button>
 

@@ -30,10 +30,12 @@ client.interceptors.request.use(
   }
 );
 
+
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
     if (
       error.response?.status !== 401 ||
       !originalRequest ||
@@ -42,32 +44,54 @@ client.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const requestUrl = originalRequest.url;
+
+    const isAuthRequest =
+      requestUrl === "/accounts/login/" ||
+      requestUrl === "/accounts/register/" ||
+      requestUrl === "/accounts/token/refresh/" ||
+      requestUrl === "/accounts/password-reset/" ||
+      requestUrl === "/accounts/password-reset/confirm/";
+
+    if (isAuthRequest) {
+      return Promise.reject(error);
+    }
+
     const refreshToken = localStorage.getItem("refreshToken");
+
     if (!refreshToken) {
+      logout();
+      window.location.assign("/login");
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
+
     try {
       refreshRequest ||= axios
-        .post(`${baseURL}/accounts/token/refresh/`, { refresh: refreshToken })
+        .post(`${baseURL}/accounts/token/refresh/`, {
+          refresh: refreshToken,
+        })
         .then((response) => response.data.access)
         .finally(() => {
           refreshRequest = null;
         });
 
       const accessToken = await refreshRequest;
+
       localStorage.setItem("accessToken", accessToken);
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
       return client(originalRequest);
     } catch (refreshError) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("currentUser");
+      logout();
+      window.location.assign("/login");
+
       return Promise.reject(refreshError);
     }
   },
 );
+
 
 
 // =====================================================
@@ -229,6 +253,20 @@ export async function login(
     }
   );
 
+  return res.data;
+}
+
+export async function requestPasswordReset(email) {
+  const res = await client.post("/accounts/password-reset/", { email });
+  return res.data;
+}
+
+export async function confirmPasswordReset(uid, token, password) {
+  const res = await client.post("/accounts/password-reset/confirm/", {
+    uid,
+    token,
+    password,
+  });
   return res.data;
 }
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
-import { login } from "../services/api";
+import { login, requestPasswordReset } from "../services/api";
 import HomeBackground from "../components/HomeBackground";
 
 /* =========================================
@@ -203,7 +203,10 @@ function Logo() {
 function Login() {
 
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   const [form, setForm] = useState({
     email: "",
@@ -248,7 +251,7 @@ function Login() {
 
       localStorage.setItem("currentUser", JSON.stringify(res.user));
 
-      navigate("/");
+      navigate(location.state?.from || "/");
 
     } catch (err) {
       console.error("Login error:", err);
@@ -259,6 +262,25 @@ function Login() {
         setError("Couldn't log in. Check your email and password.");
       }
 
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordResetRequest = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setResetMessage("");
+    setLoading(true);
+
+    try {
+      const response = await requestPasswordReset(form.email);
+      setResetMessage(response.message);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Could not send the reset email. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -315,12 +337,31 @@ function Login() {
               </h2>
 
               <p style={{ fontSize: 14, color: tokens.textMuted, lineHeight: 1.6, margin: "0 0 28px" }}>
-                Sign in to continue your interview preparation.
+                {isResettingPassword
+                  ? "Enter your email and we’ll send you a password reset link."
+                  : "Sign in to continue your interview preparation."}
               </p>
 
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <form
+                onSubmit={isResettingPassword ? handlePasswordResetRequest : handleSubmit}
+                style={{ display: "flex", flexDirection: "column", gap: 18 }}
+              >
 
                 {error && <div className="lg-banner-error">{error}</div>}
+                {resetMessage && (
+                  <div
+                    role="status"
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      background: "rgba(69,224,208,0.12)",
+                      color: tokens.teal,
+                      fontSize: 13,
+                    }}
+                  >
+                    {resetMessage}
+                  </div>
+                )}
 
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: tokens.textMuted, marginBottom: 8 }}>
@@ -337,12 +378,20 @@ function Login() {
                   />
                 </div>
 
-                <div>
+                {!isResettingPassword && <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <label style={{ fontSize: 13, fontWeight: 600, color: tokens.textMuted }}>
                       Password
                     </label>
-                    <button type="button" className="lg-text-link">
+                    <button
+                      type="button"
+                      className="lg-text-link"
+                      onClick={() => {
+                        setIsResettingPassword(true);
+                        setError(null);
+                        setResetMessage("");
+                      }}
+                    >
                       Forgot password?
                     </button>
                   </div>
@@ -367,19 +416,37 @@ function Login() {
                       {showPassword ? "🙈" : "👁️"}
                     </button>
                   </div>
-                </div>
+                </div>}
 
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                {!isResettingPassword && <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                   <input type="checkbox" className="lg-checkbox" />
                   <span style={{ fontSize: 13.5, color: tokens.textMuted }}>Remember me</span>
-                </div>
+                </div>}
 
                 <button type="submit" disabled={loading} className="lg-primary-btn">
-                  {loading ? "Logging in…" : "Login"}
+                  {loading
+                    ? isResettingPassword ? "Sending…" : "Logging in…"
+                    : isResettingPassword ? "Send reset link" : "Login"}
                 </button>
 
               </form>
 
+              {isResettingPassword && (
+                <button
+                  type="button"
+                  className="lg-text-link"
+                  onClick={() => {
+                    setIsResettingPassword(false);
+                    setError(null);
+                    setResetMessage("");
+                  }}
+                  style={{ marginTop: 16 }}
+                >
+                  Back to login
+                </button>
+              )}
+
+              {!isResettingPassword && <>
               <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "26px 0" }}>
                 <div style={{ height: 1, flex: 1, background: tokens.border }} />
                 <span className="lg-mono" style={{ fontSize: 11, color: tokens.textMuted }}>OR</span>
@@ -400,6 +467,7 @@ function Login() {
                 Don't have an account?{" "}
                 <Link to="/register" className="lg-link">Create account</Link>
               </p>
+              </>}
 
             </div>
 
