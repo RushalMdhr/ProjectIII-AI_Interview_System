@@ -17,6 +17,7 @@ export default function Interview() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isInterviewEnded, setIsInterviewEnded] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState(state?.sessionId || null);
@@ -103,13 +104,21 @@ export default function Interview() {
       const response = await sendChatMessage(content, sessionId);
       const interviewFeedback = response.interview_feedback;
       const nextQuestion = response.next_question;
+      if (response.session?.halted) {
+        setIsInterviewEnded(true);
+      }
+      const savedFeedback = interviewFeedback?.feedback;
+      const feedbackText = typeof savedFeedback === "string"
+        ? savedFeedback
+        : savedFeedback?.feedback_text;
       const assistantContent = [
-        interviewFeedback?.feedback,
+        feedbackText,
         nextQuestion?.question_text,
+        response.message,
       ].filter(Boolean).join("\n\n");
       if (assistantContent) {
         setMessages((current) => [...current, {
-          id: nextQuestion?.id || interviewFeedback?.id || `assistant-${Date.now()}`,
+          id: `assistant-${Date.now()}`,
           role: "assistant",
           content: assistantContent,
         }]);
@@ -203,7 +212,7 @@ export default function Interview() {
           {isSending && <LoaderCircle className="interview-loading" size={20} />}
           <div ref={messagesEndRef} />
         </main>
-        {hasStarted && (
+        {hasStarted && !isInterviewEnded && (
         <form className="interview-composer" onSubmit={handleSend}>
           <textarea
             ref={inputRef}
