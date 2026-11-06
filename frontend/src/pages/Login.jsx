@@ -258,7 +258,11 @@ function Login() {
 
       localStorage.setItem("currentUser", JSON.stringify(res.user));
 
-      navigate(location.state?.from || "/");
+      navigate(
+        res.user?.is_superuser
+          ? "/admin/dashboard"
+          : location.state?.from || "/",
+      );
 
     } catch (err) {
       console.error("Login error:", err);

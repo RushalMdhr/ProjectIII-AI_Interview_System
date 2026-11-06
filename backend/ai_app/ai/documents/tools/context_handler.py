@@ -9,7 +9,7 @@ from ai_app.ai.utils.message import system_talking,user_talking
 from ai_app.ai.utils.embeddings import embed_text
 
 
-def _default_question(role, difficulty):
+def _default_question(role, difficulty, session=None):
 	print(
 		f"[INTERVIEW-RAG] FALLBACK generation started role={role!r} "
 		f"difficulty={difficulty!r}",
@@ -21,7 +21,7 @@ def _default_question(role, difficulty):
 		f"the difficulty is {difficulty}."
 	)
 	try:
-		question = str(ai([system_talking(prompt),user_talking('next question please')])).strip()
+		question = str(ai([system_talking(prompt),user_talking('next question please')], session=session)).strip()
 		question = question.splitlines()[0].strip(" -*0123456789.:")
 		if question:
 			print(
