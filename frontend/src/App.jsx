@@ -35,6 +35,16 @@ function AppChrome() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const shellClass = isAdminRoute ? "" : "app-layout";
+  let isSuperuser = false;
+  try {
+    isSuperuser = JSON.parse(localStorage.getItem("currentUser") || "null")?.is_superuser === true;
+  } catch {
+    isSuperuser = false;
+  }
+
+  if (isSuperuser && !isAdminRoute) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   return (
     <div className={shellClass}>
