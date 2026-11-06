@@ -248,7 +248,7 @@ any bad behaviour from the user like : saying he doesnot know or next question, 
 
 ### ________________________________________ EVALUATION ___________________________________________________________________
 
-def evaluate_interview_answer(question, expected_answer, candidate_answer):
+def evaluate_interview_answer_llm(question, expected_answer, candidate_answer):
     format = """{
     classification : ["IRELEVENT","REPEAT","AVAOID","GOOD","PASS"], # string format
     rating : # give number x out of 10, provide 0 unless good or pass classification, numberformat
