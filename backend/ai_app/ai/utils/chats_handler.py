@@ -246,6 +246,7 @@ any bad behaviour from the user like : saying he doesnot know or next question, 
 """,
 }
 
+### ________________________________________ EVALUATION ___________________________________________________________________
 
 def evaluate_interview_answer(question, expected_answer, candidate_answer, user=None, session=None):
     format = """{
@@ -277,6 +278,8 @@ expected answer : {expected_answer}
 
 format of json: 
 {format}
+
+Return only one valid JSON object matching the format above. Do not ask follow-up questions or include any text outside the JSON object.
 """
     print(f"[EVAL] prompt: {prompt}", flush=True)
     raw = ai(
@@ -299,17 +302,39 @@ format of json:
     try:
         result = json.loads(match.group(0) if match else str(raw))
     except json.JSONDecodeError as e:
-        print(f"[EVAL] JSON parse failed: {e}", flush=True)
-        return {
-            "classification": "IRELEVENT",
-            "rating": 0,
-            "feedback": "Evaluation failed - invalid JSON",
-        }
+        print(f"[EVAL] JSON parse failed; retrying with JSON-only instruction: {e}", flush=True)
+        retry_prompt = (
+            f"{prompt}\n\nYour previous response was not valid JSON. Re-evaluate the candidate answer "
+            "and return only one valid JSON object matching the specified format. Do not ask questions "
+            "or include any text outside the JSON object."
+        )
+        retry_raw = ai([system_talking(retry_prompt), user_talking(candidate_answer)])
+        retry_match = re.search(r"\{.*\}", str(retry_raw), re.DOTALL)
+        try:
+            result = json.loads(retry_match.group(0) if retry_match else str(retry_raw))
+        except (json.JSONDecodeError, TypeError) as retry_error:
+            print(f"[EVAL] Retry JSON parse failed: {retry_error}", flush=True)
+            return {
+                "classification": "IRELEVENT",
+                "rating": 0,
+                "feedback": "Evaluation failed - invalid JSON",
+            }
     print(f"[EVAL] RESULT : {result}", flush=True)
+
+    # Accept both the requested JSON object and a positional JSON array.
+    if isinstance(result, list) and len(result) >= 3:
+        result = {
+            "classification": result[0],
+            "rating": result[1],
+            "feedback": result[2],
+        }
+    if not isinstance(result, dict):
+        print("[EVAL] Parsed response has an unsupported format", flush=True)
+        return 0, "Evaluation failed - invalid response format"
     
-    print(f"[EVAL] RESULT RATING: {result['rating']} , RESULT FEEDBACK : {result['feedback']}", flush=True)
+    print(f"[EVAL] RESULT RATING: {result.get('rating', 0)} , RESULT FEEDBACK : {result.get('feedback', '')}", flush=True)
     # return  result.rating, result.feedback
-    return   result['rating'], result['feedback']
+    return result.get('rating', 0), result.get('feedback', '')
 
 
 def chats_handler(
@@ -459,6 +484,7 @@ def generate_interview_intro(candidate_name, role, user=None, session=None):
     )
     prompt = f"""
 Return one natural, concise interview opening question based on this question.
+dont add anything like assistent or ai thing just message like real interviewer
 Keep the candidate's name and target role. Return only the question.
 
 Question: {question}
@@ -466,11 +492,12 @@ Question: {question}
     try:
         response = generate_response(
             use_case="interview_assessment",
-            message=[system_talking(prompt)],
+            message=[system_talking(prompt),user_talking('ready')],
             user=user,
             session=session,
         )
         response = str(response).strip()
+        print("[OPEING ANSWER GENERATION] : ",response)
         return response or question
     except Exception as error:
         print(f"[INTERVIEW-AI] Intro generation failed: {error}", flush=True)
