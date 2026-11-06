@@ -7,10 +7,11 @@ from ai_app.ai.utils.embeddings import embed_text
 from ai_app.ai.utils.message import assistant_talking, user_talking
 from ai_app.ai.utils.chats_handler import (
     chats_handler,
-    evaluate_interview_answer,
+    evaluate_interview_answer_llm,
     generate_chat_title,
     generate_interview_intro,
 )
+from ai_app.ai.utils.Evaluator import evaluate_candidate_answer
 
 from .models import ChatSession, ChatMessage, InterviewFeedback
 from accounts.models import UserProfile
@@ -55,6 +56,7 @@ def _create_question_attempt(session, question):
         asked_questions_id=None if not question.get("id") else question.get("id"),
         question_text=question["question"],
         candidate_answer="",
+        weights=question.get("weights", []),
         # question_number=session.question_count + 1,
         question_difficulty=question.get("difficulty", session.current_difficulty),
     )
@@ -186,13 +188,24 @@ def _send_interview_answer(request, session, user_content):
     expected_answer = attempt.question_answer or (
         attempt.asked_questions.answer if attempt.asked_questions_id else ""
     )
+    dimensions = attempt.weights
     try:
-        rating, feedback = evaluate_interview_answer(
+        rating, feedback = evaluate_interview_answer_llm(
             question_text,
             expected_answer,
             user_content,
         )
         print("[ CHECKER ] : ",flush=True)
+
+        geval_result = evaluate_candidate_answer(
+            asked_question=question_text,
+            expected_answer=expected_answer,
+            candidate_answer=user_content,
+            dimensions=dimensions,
+        )
+
+        print("[ G EVAL ] : ",geval_result)
+
     except Exception as error:
         print(f"[INTERVIEW] Answer processing failed: {error}", flush=True)
         return Response(
@@ -226,7 +239,10 @@ def _send_interview_answer(request, session, user_content):
             top_k=3,
             candidate_ids=attempt.prefetched_question_ids,
             session=session,
+	        prev_question=question_text,
+            result=geval_result
         )
+        print("[RESULT WITH GEVAL] : ",result)
         if result.get("status") == "missing_role":
             session.halted = True
             session.archived = True
@@ -311,8 +327,16 @@ def sessions(request):
         print(f"[INTERVIEW SESSION CREATING] CHECKING ROLES : ",use_case,flush=True)
         if use_case == "interview_assessment":
             print(f"[I M IN] CHECKING ROLES")
-            profile = UserProfile.objects.filter(user=request.user).only("target_role").first() # fetched the target role for asking
-            role = (profile.target_role if profile else "").strip()
+            profile = (
+                UserProfile.objects.filter(user=request.user)
+                .only("primary_role", "target_roles")
+                .first()
+            )
+            role = (
+                profile.primary_role or (profile.target_roles or [""])[0]
+                if profile
+                else ""
+            ).strip()
             if not role:
                 return Response(
                     {"error": "Add your target role to your profile before starting an interview."},
