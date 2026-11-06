@@ -104,7 +104,9 @@ def start_interview(request, session_id):
 
     session.interview_role = role
     candidate_name = request.user.first_name.strip() or request.user.username
-    opening_question = generate_interview_intro(candidate_name, role)
+    opening_question = generate_interview_intro(
+        candidate_name, role, user=request.user, session=session
+    )
     message = ChatMessage.objects.create(
         session=session,
         user=request.user,
@@ -188,6 +190,8 @@ def _send_interview_answer(request, session, user_content):
             question_text,
             expected_answer,
             user_content,
+            user=request.user,
+            session=session,
         )
         answer_embedding = embed_text(user_content)
     except Exception as error:
@@ -404,7 +408,9 @@ def send_message(request):
         if session.title == 'New Chat Session':
             try:
                 print(f"[send_message] Generating title for session {session.id}", flush=True)
-                session.title = generate_chat_title(user_content)
+                session.title = generate_chat_title(
+                    user_content, user=request.user, session=session
+                )
                 session.save(update_fields=['title', 'updated_at'])
                 print(f"[send_message] Title generated: {session.title}", flush=True)
             except Exception as e:
@@ -475,6 +481,8 @@ def send_message(request):
                 chat_history=chat_history,
                 # context=context,
                 use_case=session.use_case,
+                user=request.user,
+                session=session,
             )
 
             assistant_content = result["assistant_content"]
