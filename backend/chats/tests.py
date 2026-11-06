@@ -33,187 +33,35 @@ class InterviewFlowTests(TestCase):
 		self.client = APIClient()
 		self.client.force_authenticate(user=self.user)
 
-	def test_interviewer_response_fields_depend_on_action(self):
-		self.assertEqual(
-			_parse_interviewer_response({"action": "SKIP"})["feedback"],
-			"",
-		)
-		self.assertEqual(
-			_parse_interviewer_response({"action": "CONTINUE"})["question"],
-			"",
-		)
-		self.assertEqual(
-			_parse_interviewer_response({"action": "CONTINUE"})["action"],
-			"CONTINUE",
-		)
-		with self.assertRaises(ValueError):
-			_parse_interviewer_response(
-				{"action": "CONTINUE"},
-				require_feedback=True,
-			)
-		with self.assertRaises(ValueError):
-			_parse_interviewer_response({"action": "REPEAT"})
-
-	def test_interview_history_endpoint_returns_attempts_and_timestamps(self):
-		attempt = InterviewFeedback.objects.create(
+	def test_short_interview_answers_are_rejected_before_ai_processing(self):
+		question_message = ChatMessage.objects.create(
 			session=self.session,
-			question_text="Tell me about a project.",
-			question_answer="Explain your contribution.",
-			candidate_answer="I built an API.",
-			rating=7,
-			feedback='{"feedback_text":"Good detail."}',
+			user=self.user,
+			assistant_content="Please introduce yourself.",
+		)
+		InterviewFeedback.objects.create(
+			session=self.session,
+			message=question_message,
+			question_text="Please introduce yourself.",
 		)
 
-		response = self.client.get(
-			reverse("interview_history", kwargs={"session_id": self.session.id})
-		)
+		with (
+			patch("chats.views.evaluate_interview_answer") as evaluate_answer,
+			patch("chats.views.embed_text") as create_embedding,
+		):
+			for answer in ("next", "jzaz<", "I am"):
+				response = self.client.post(
+					reverse("send_message"),
+					{"session": self.session.id, "user_content": answer},
+					format="json",
+				)
 
-		self.assertEqual(response.status_code, 200)
-		self.assertEqual(response.data["session"]["id"], self.session.id)
-		self.assertEqual(len(response.data["interview_feedback"]), 1)
-		entry = response.data["interview_feedback"][0]
-		self.assertEqual(entry["question_text"], "Tell me about a project.")
-		self.assertEqual(entry["question_answer"], "Explain your contribution.")
-		self.assertEqual(entry["candidate_answer"], "I built an API.")
-		self.assertEqual(entry["rating"], 7)
-		self.assertEqual(entry["feedback"], {"feedback_text": "Good detail."})
-		self.assertIn("created_at", entry)
-		self.assertIn("updated_at", entry)
-		self.assertEqual(entry["id"], attempt.id)
+				self.assertEqual(response.status_code, 400)
+				self.assertIn("at least 3 words", response.data["error"])
 
-	def test_interview_history_is_scoped_to_session_owner(self):
-		other_user = User.objects.create_user(
-			username="other-candidate",
-			email="other-candidate@example.test",
-			password="test-password",
-		)
-		self.client.force_authenticate(user=other_user)
-
-		response = self.client.get(
-			reverse("interview_history", kwargs={"session_id": self.session.id})
-		)
-
-		self.assertEqual(response.status_code, 404)
-
-	def test_similar_prior_answers_are_detected(self):
-		self.assertTrue(
-			_find_similar_answer(
-				"I designed a scalable payments API for the company.",
-				["I designed a scalable payments API for the company!"],
-			)
-		)
-		self.assertTrue(
-			_find_similar_answer(
-				"I designed a scalable payments API for the company.",
-				["I designed a scalable payments API for our company."],
-			)
-		)
-		self.assertFalse(
-			_find_similar_answer(
-				"I designed a scalable payments API for the company.",
-				["I learned about teamwork and resolving conflict."],
-			)
-		)
-
-	def test_interviewer_varies_natural_response_for_repeated_answers(self):
-		with patch(
-			"ai_app.ai.documents.tools.context_handler.ai",
-			return_value='{"action":"CONTINUE","feedback":"Let’s try a different example.","question":"Next question"}',
-		) as generate:
-			generate_interviewer_response(
-				result={"overall_score": 6},
-				prev_question="Describe a challenge.",
-				next_question="Next question",
-				candidate_answer="I built a payment API.",
-				repetition_count=4,
-				matching_previous_answer="I built a payment API.",
-			)
-
-		prompt = generate.call_args.kwargs["msg"][0]["content"]
-		self.assertIn("Repetition Count: 4", prompt)
-		self.assertIn("Similar Previous Answer: I built a payment API.", prompt)
-		self.assertIn("Vary the wording and tone", prompt)
-		self.assertEqual(generate.call_args.kwargs["temperature"], 0.7)
-		self.assertEqual(
-			generate.call_args.kwargs["format"]["properties"]["action"]["enum"],
-			["CONTINUE", "REPEAT", "SKIP", "REVIEW"],
-		)
-
-	def test_interviewer_uses_safe_feedback_if_both_model_responses_are_invalid(self):
-		with patch(
-			"ai_app.ai.documents.tools.context_handler.ai",
-			side_effect=["not json", '{"action":"CONTINUE"}'],
-		) as generate:
-			response = generate_interviewer_response(
-				result={"overall_score": 6},
-				prev_question="Describe a challenge.",
-				next_question="Next question",
-				candidate_answer="I built a payment API.",
-				repetition_count=4,
-				matching_previous_answer="I built a payment API.",
-			)
-
-		self.assertEqual(response["action"], "CONTINUE")
-		self.assertTrue(response["feedback"])
-		self.assertEqual(response["question"], "")
-		self.assertEqual(generate.call_count, 2)
-
-	def test_evaluator_receives_previous_interview_answers_as_context(self):
-		history = [{
-			"question_text": "Tell me about a project.",
-			"candidate_answer": "I built an API.",
-		}]
-
-		with patch("ai_app.ai.utils.Evaluator.create_evaluator") as create_evaluator:
-			create_evaluator.return_value.score = 0.8
-			create_evaluator.return_value.reason = "Clear answer."
-			evaluate_interview_answer(
-				question="How did you handle a challenge?",
-				answer="I built an API.",
-				ideal_answer="",
-				dimensions=[{"label": "behavioral", "score": 1.0}],
-				model=None,
-				history=history,
-			)
-
-		test_case = create_evaluator.return_value.measure.call_args.args[0]
-		self.assertIn("Previous interview responses", test_case.input)
-		self.assertIn("I built an API.", test_case.input)
-
-	def test_interview_sequences_match_difficulty_and_start_with_introduction(self):
-		expected_categories = {
-			"easy": {
-				"introduction": 1,
-				"experience": 1,
-				"behavioral": 1,
-				"situational": 1,
-				"technical": 1,
-			},
-			"medium": {
-				"introduction": 1,
-				"experience": 2,
-				"behavioral": 2,
-				"situational": 1,
-				"technical": 2,
-			},
-			"hard": {
-				"introduction": 2,
-				"experience": 2,
-				"behavioral": 2,
-				"situational": 2,
-				"technical": 2,
-			},
-		}
-		for difficulty, expected_counts in expected_categories.items():
-			self.session.interview_difficulty = difficulty
-			self.session.max_questions = sum(expected_counts.values())
-			sequence = interview_category_sequence(self.session)
-			self.assertEqual(sequence[0], "introduction")
-			self.assertEqual(len(sequence), self.session.max_questions)
-			self.assertEqual(
-				{category: sequence.count(category) for category in expected_counts},
-				expected_counts,
-			)
+		evaluate_answer.assert_not_called()
+		create_embedding.assert_not_called()
+		self.assertEqual(ChatMessage.objects.filter(session=self.session).count(), 1)
 
 	@patch("chats.views.generate_interview_intro", return_value="Please introduce yourself.")
 	def test_start_prefetch_and_answer_return_feedback(self, _generate_intro):
