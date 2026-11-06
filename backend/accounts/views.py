@@ -79,6 +79,7 @@ def me(request):
         'email': request.user.email,
         'first_name': request.user.first_name,
         'profile_picture': profile_picture,
+        'is_superuser': request.user.is_superuser,
     })
 
 
@@ -140,6 +141,7 @@ def google_callback(request):
         'email': user.email,
         'first_name': user.first_name,
         'profile_picture': profile_picture,
+        'is_superuser': user.is_superuser,
     }
 
     callback_url = getattr(
@@ -391,6 +393,7 @@ def login_account(request):
             'email': user.email,
             'first_name': user.first_name,
             'profile_picture': profile_picture,
+            'is_superuser': user.is_superuser,
         },
 
         'access': str(refresh.access_token),
