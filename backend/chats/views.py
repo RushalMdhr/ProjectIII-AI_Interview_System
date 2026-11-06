@@ -14,7 +14,11 @@ from ai_app.ai.utils.chats_handler import (
 
 from .models import ChatSession, ChatMessage, InterviewFeedback
 from accounts.models import UserProfile
-from .serializers import ChatSessionSerializer, ChatMessageSerializer
+from .serializers import (
+    ChatSessionSerializer,
+    ChatMessageSerializer,
+    InterviewFeedbackSerializer,
+)
 
 from ai_app.ai.documents.tools.context_handler import (
     get_next_questions,
@@ -45,10 +49,10 @@ def _update_interview_level(session, rating):
 
 
 def _create_question_attempt(session, question):
+    print("[ CREATE QUESTION ATTEMPT ] : ",question.get("id"),flush=True)
     return InterviewFeedback.objects.create(
         session=session,
-        # message=message,
-        asked_questions_id=question.get("id"),
+        asked_questions_id=None if not question.get("id") else question.get("id"),
         question_text=question["question"],
         candidate_answer="",
         # question_number=session.question_count + 1,
@@ -74,21 +78,17 @@ def start_interview(request, session_id):
 
     print("[ START_INTERVIEW ]session id : ",session_id,flush=True)
     
-    # existing_attempt = session.interview_feedbacks.filter(
-    #     answer_message__isnull=True,
-    #     rating__isnull=True,
-    # ).select_related("message").order_by("-created_at").first() # message id fetch garxa jasma recent question hunxa
     print("[ START_INTERVIEW ]feedback : ",session_id,flush=True)
     existing_attempt = session.interview_feedbacks.filter(
         candidate_answer="",
         rating__isnull=True,
-    ).order_by("-created_at").first() # message id fetch garxa jasma recent question hunxa
+    ).order_by("-created_at").first()
     ### ____________________________ WARNING _________________________________________
     if existing_attempt:
         return Response(
             {
                 "session": ChatSessionSerializer(session).data,
-                "message": ChatMessageSerializer(existing_attempt.message).data,
+                "interview_feedback": InterviewFeedbackSerializer(existing_attempt).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -104,36 +104,24 @@ def start_interview(request, session_id):
     session.interview_role = role
     candidate_name = request.user.first_name.strip() or request.user.username
     opening_question = generate_interview_intro(candidate_name, role)
-    # message = ChatMessage.objects.create(
-    #     session=session,
-    #     user=request.user,
-    #     assistant_content=opening_question,
-    # )
-    message = {
-        'session': session.id,          # ← int, not object
-        'user': request.user.id,        # ← int, not object
-        "assistant_content": opening_question,
-    }
     print("[ START_INTERVIEW ]opening question : ",opening_question,flush=True)
 
-    _create_question_attempt(
+    attempt = _create_question_attempt(
         session,
-        # message,
         {
             "question": opening_question,
             "answer": "",
             "difficulty": session.current_difficulty,
         },
     )
-    # session.question_count = 1
-    # session.save(update_fields=["interview_role", "question_count", "updated_at"])
-    session.save(update_fields=["interview_role", "updated_at"])
+    session.question_count = 1
+    session.save(update_fields=["interview_role", "question_count", "updated_at"])
     print("[ START_INTERVIEW ]feedback : ",session_id,flush=True)
 
     return Response(
         {
             "session": ChatSessionSerializer(session).data,
-            "message": message
+            "interview_feedback": InterviewFeedbackSerializer(attempt).data,
         },
         status=status.HTTP_201_CREATED,
     )
@@ -199,8 +187,6 @@ def _send_interview_answer(request, session, user_content):
             user_content,
         )
         print("[ CHECKER ] : ",flush=True)
-        answer_embedding = embed_text(user_content)
-        print("[ CHECKER ] : ",flush=True)
     except Exception as error:
         print(f"[INTERVIEW] Answer processing failed: {error}", flush=True)
         return Response(
@@ -211,8 +197,8 @@ def _send_interview_answer(request, session, user_content):
 
     _update_interview_level(session, rating)
     assistant_content = feedback
-    assistant_next_question = None
     next_question = None
+    next_attempt = None
 
     if rating <= 1:
         session.halted = True
@@ -233,7 +219,6 @@ def _send_interview_answer(request, session, user_content):
             session_id=session.id,
             top_k=3,
             candidate_ids=attempt.prefetched_question_ids,
-            query_embedding=answer_embedding,
             session=session,
         )
         if result.get("status") == "missing_role":
@@ -243,29 +228,18 @@ def _send_interview_answer(request, session, user_content):
                 f"{feedback}\n\nInterview paused. Please add your target role to your profile."
             )
         else:
-            # next_question = result["question"]
-            assistant_next_question = result["question"]
+            next_question = result["question"]
 
-    # message = ChatMessage.objects.create(
-    #     session=session,
-    #     user=request.user,
-    #     user_content=user_content,
-    #     user_content_embedding=answer_embedding,
-    #     assistant_content=assistant_content,
-    # )
-    message = {
-            'session': session.id,          # ← int, not object
-            'user': request.user.id,        # ← int, not object
-            "assistant_content": assistant_content,
-        }
     attempt.candidate_answer = user_content
     attempt.rating = rating
     attempt.feedback = assistant_content
     attempt.save(update_fields=["candidate_answer", "rating", "feedback", "updated_at"])
 
+    print("[ NEXT QUESTION ] : ",next_question,flush=True)
     if next_question:
-        _create_question_attempt(session, next_question)
+        next_attempt = _create_question_attempt(session, next_question)
         session.question_count += 1
+        print("[ NEXT QUESTION ] : ",next_question,flush=True)
 
     session.save(update_fields=[
         "current_difficulty",
@@ -277,7 +251,11 @@ def _send_interview_answer(request, session, user_content):
     return Response(
         {
             "session": ChatSessionSerializer(session).data,
-            "message": message
+            "interview_feedback": InterviewFeedbackSerializer(attempt).data,
+            "next_question": (
+                InterviewFeedbackSerializer(next_attempt).data
+                if next_attempt else None
+            ),
         },
         status=status.HTTP_201_CREATED,
     )

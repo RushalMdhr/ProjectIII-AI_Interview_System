@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from accounts.models import User, UserProfile
-from chats.models import ChatMessage, ChatSession, InterviewFeedback
+from chats.models import ChatSession, InterviewFeedback
 
 
 class InterviewFlowTests(TestCase):
@@ -27,16 +27,18 @@ class InterviewFlowTests(TestCase):
 		self.client.force_authenticate(user=self.user)
 
 	@patch("chats.views.generate_interview_intro", return_value="Please introduce yourself.")
-	def test_start_prefetch_and_answer_create_linked_attempts(self, _generate_intro):
+	def test_start_prefetch_and_answer_return_feedback(self, _generate_intro):
 		start_url = reverse("start_interview", kwargs={"session_id": self.session.id})
 		response = self.client.post(start_url)
 
 		self.assertEqual(response.status_code, 201)
-		opening_message = ChatMessage.objects.get(session=self.session)
 		opening_attempt = InterviewFeedback.objects.get(session=self.session)
-		self.assertIsNone(opening_message.user_content)
 		self.assertEqual(opening_attempt.question_text, "Please introduce yourself.")
-		self.assertEqual(opening_attempt.question_number, 1)
+		self.assertEqual(
+			response.data["interview_feedback"]["question_text"],
+			"Please introduce yourself.",
+		)
+		self.assertEqual(response.data["session"]["question_count"], 1)
 
 		with patch(
 			"chats.views.prefetch_next_questions",
@@ -75,12 +77,14 @@ class InterviewFlowTests(TestCase):
 		self.assertEqual(answer_response.status_code, 201)
 		opening_attempt.refresh_from_db()
 		self.assertEqual(opening_attempt.rating, 8)
+		self.assertEqual(opening_attempt.candidate_answer, "I would start with clear resource boundaries.")
 		self.assertEqual(
-			opening_attempt.answer_message.user_content,
-			"I would start with clear resource boundaries.",
+			answer_response.data["interview_feedback"]["feedback"],
+			"Clear and relevant.",
 		)
-
-		next_attempt = InterviewFeedback.objects.get(question_number=2)
+		next_attempt = InterviewFeedback.objects.get(question_text=next_question["question"])
 		self.assertEqual(next_attempt.question_text, next_question["question"])
-		self.assertEqual(next_attempt.message.user_content, "I would start with clear resource boundaries.")
-		self.assertIn(next_question["question"], next_attempt.message.assistant_content)
+		self.assertEqual(
+			answer_response.data["next_question"]["question_text"],
+			next_question["question"],
+		)
