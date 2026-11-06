@@ -158,6 +158,41 @@ export async function sendChatMessage(userContent, sessionId = null) {
   return res.data;
 }
 
+export async function getAnalyticsSummary(days = 30) {
+  const res = await client.get(`/ai/analytics/summary/?days=${days}`);
+  return res.data;
+}
+
+export async function getAnalyticsTimeseries(days = 30) {
+  const res = await client.get(`/ai/analytics/timeseries/?days=${days}`);
+  return res.data;
+}
+
+export async function getUserActivity(days = 30) {
+  const res = await client.get(`/ai/analytics/users/?days=${days}`);
+  return res.data;
+}
+
+export async function getModelPricing() {
+  const res = await client.get("/ai/analytics/pricing/");
+  return res.data;
+}
+
+export async function saveModelPricing(payload) {
+  const res = await client.post("/ai/analytics/pricing/", payload);
+  return res.data;
+}
+
+export async function getUseCaseConfigs() {
+  const res = await client.get("/ai/analytics/use-case-config/");
+  return res.data;
+}
+
+export async function saveUseCaseConfig(payload) {
+  const res = await client.post("/ai/analytics/use-case-config/", payload);
+  return res.data;
+}
+
 
 export async function startChatInterview(sessionId) {
   const res = await client.post(`/chats/session/${sessionId}/start-interview/`);
