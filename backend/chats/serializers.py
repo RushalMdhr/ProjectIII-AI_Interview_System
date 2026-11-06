@@ -1,7 +1,24 @@
 # chat/serializers.py
 
 from rest_framework import serializers
-from .models import ChatSession, ChatMessage
+from .models import ChatSession, ChatMessage, InterviewFeedback
+
+
+class InterviewFeedbackSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = InterviewFeedback
+        fields = [
+            'id',
+            'session',
+            'question_text',
+            'candidate_answer',
+            'rating',
+            'feedback',
+            'question_difficulty',
+            'created_at',
+        ]
+        read_only_fields = fields
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
