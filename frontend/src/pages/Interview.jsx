@@ -216,6 +216,7 @@ export default function Interview() {
             <Send size={16} /><span className="interview-send-label">Send</span>
           </button>
         </form>
+        )}
         {error && <p className="interview-error">{error}</p>}
       </div>
     </div>
