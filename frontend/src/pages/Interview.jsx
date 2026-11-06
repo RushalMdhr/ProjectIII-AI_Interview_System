@@ -57,21 +57,14 @@ export default function Interview() {
       setSessionId(activeSessionId);
 
       const response = await startChatInterview(activeSessionId);
-      console.log("response : ", response);
-
-      const opening = response.message?.assistant_content;
-
       const opening = response.interview_feedback?.question_text;
       if (!opening) {
         setError("The interview could not create its opening question.");
         return;
       }
 
-      setMessages([
-        { id: response.message.id, role: "assistant", content: opening },
-      ]);
       setMessages([{
-        id: response.interview_feedback.id,
+        id: response.interview_feedback.id || `assistant-${Date.now()}`,
         role: "assistant",
         content: opening,
       }]);
@@ -127,17 +120,6 @@ export default function Interview() {
 
     try {
       const response = await sendChatMessage(content, sessionId);
-      const assistantContent = response.message?.assistant_content;
-
-      if (assistantContent) {
-        setMessages((current) => [
-          ...current,
-          {
-            id: response.message.id || `assistant-${Date.now()}`,
-            role: "assistant",
-            content: assistantContent,
-          },
-        ]);
       const interviewFeedback = response.interview_feedback;
       const nextQuestion = response.next_question;
       if (response.session?.halted) {
@@ -152,6 +134,7 @@ export default function Interview() {
         nextQuestion?.question_text,
         response.message,
       ].filter(Boolean).join("\n\n");
+
       if (assistantContent) {
         setMessages((current) => [...current, {
           id: `assistant-${Date.now()}`,
