@@ -32,7 +32,8 @@ MANIFEST
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-
+backend/ai_app/ai/documents/created_doc
+backend/ai_app/ai/documents/question_answers
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

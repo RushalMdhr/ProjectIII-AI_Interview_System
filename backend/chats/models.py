@@ -8,6 +8,13 @@ class ChatSession(models.Model):
         ("medium", "Medium"),
         ("hard", "Hard"),
     ]
+    STATE_CHOICES = [
+        ("introduction", "Introduction"),
+        ("experience", "Experience"),
+        ("behavioral", "Behavioral"),
+        ("situational", "Situational"),
+        ("technical", "Technical"),
+    ]
     USE_CASE_CHOICES = [
         ("general_chat", "General Chat"),
         ("career_guidance", "Career Guidance"),
@@ -21,6 +28,12 @@ class ChatSession(models.Model):
     # Interview-only fields
     interview_difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default="medium")
     current_difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default="easy")
+    current_state = models.CharField(
+        max_length=20,
+        choices=STATE_CHOICES,
+        default="introduction",
+    )
+
     max_questions = models.PositiveSmallIntegerField(default=8)
     question_count = models.PositiveSmallIntegerField(default=0)
     interview_role = models.CharField(max_length=150, null=True, blank=True)
@@ -59,19 +72,6 @@ class ChatMessage(models.Model):
     def __str__(self):
         return f"Message {self.id} - Session {self.session.id}"
 
-
-# class AskedQuestions(models.Model):
-#     session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='asked_questions')
-    
-#     asked_at = models.DateTimeField(auto_now_add=True)
-
-#     class Meta:
-#         unique_together = ('session', 'question')
-#         # db_table = 'AskedQuestions'
-
-#     def __str__(self):
-#         return f"Session {self.session.id} - Question {self.question.id}"
-
 class InterviewFeedback(models.Model):
     session = models.ForeignKey(
         ChatSession,
@@ -79,21 +79,10 @@ class InterviewFeedback(models.Model):
         related_name='interview_feedbacks'
     )
     asked_questions = models.ForeignKey(InterviewQuestions, null=True, on_delete=models.SET_NULL)
-    question_text = models.TextField(blank=True)
-    question_answer = models.TextField(blank=True)
-    question_number = models.PositiveSmallIntegerField(null=True, blank=True)
-    message = models.ForeignKey(
-        ChatMessage,
-        on_delete=models.CASCADE,
-        related_name='interview_feedbacks'
-    )
-    answer_message = models.ForeignKey(
-        ChatMessage,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='interview_answers',
-    )
+    question_text = models.TextField(blank=True) #hamro question sodheko wala
+    question_answer = models.TextField(blank=True) # expected answer from the question
+    candidate_answer = models.TextField(blank=True) # answer from the candidate
+    
     prefetched_question_ids = models.JSONField(default=list, blank=True)
     rating = models.PositiveSmallIntegerField(null=True, blank=True)
     feedback = models.TextField(blank=True, null=True)
@@ -103,7 +92,7 @@ class InterviewFeedback(models.Model):
     question_difficulty = models.CharField(max_length=10, blank=True, null=True)
 
     class Meta:
-        unique_together = ('session', 'message')
+        unique_together = ('session','asked_questions')
 
     def __str__(self):
-        return f"Feedback {self.id} - Session {self.session_id} - Message {self.message_id}"
+        return f"Feedback {self.id} - Session {self.session_id}"

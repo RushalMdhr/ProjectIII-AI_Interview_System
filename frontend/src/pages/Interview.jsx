@@ -23,6 +23,7 @@ export default function Interview() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isInterviewEnded, setIsInterviewEnded] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState(state?.sessionId || null);
@@ -60,6 +61,7 @@ export default function Interview() {
 
       const opening = response.message?.assistant_content;
 
+      const opening = response.interview_feedback?.question_text;
       if (!opening) {
         setError("The interview could not create its opening question.");
         return;
@@ -68,6 +70,11 @@ export default function Interview() {
       setMessages([
         { id: response.message.id, role: "assistant", content: opening },
       ]);
+      setMessages([{
+        id: response.interview_feedback.id,
+        role: "assistant",
+        content: opening,
+      }]);
       setHasStarted(true);
     } catch (requestError) {
       setError(
@@ -131,6 +138,26 @@ export default function Interview() {
             content: assistantContent,
           },
         ]);
+      const interviewFeedback = response.interview_feedback;
+      const nextQuestion = response.next_question;
+      if (response.session?.halted) {
+        setIsInterviewEnded(true);
+      }
+      const savedFeedback = interviewFeedback?.feedback;
+      const feedbackText = typeof savedFeedback === "string"
+        ? savedFeedback
+        : savedFeedback?.feedback_text;
+      const assistantContent = [
+        feedbackText,
+        nextQuestion?.question_text,
+        response.message,
+      ].filter(Boolean).join("\n\n");
+      if (assistantContent) {
+        setMessages((current) => [...current, {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: assistantContent,
+        }]);
       } else {
         setError(response.error || "The interview did not return a reply.");
       }
