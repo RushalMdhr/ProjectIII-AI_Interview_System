@@ -20,6 +20,7 @@ import UserProfile from "./pages/UserProfile";
 import OAuthCallback from "./pages/OAuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
+import NotFound from "./pages/NotFound";
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
@@ -105,6 +106,7 @@ function AppChrome() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </div>
