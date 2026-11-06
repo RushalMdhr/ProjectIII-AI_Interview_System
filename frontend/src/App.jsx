@@ -78,6 +78,10 @@ function AppChrome() {
           />
           <Route path="/test" element={<Test />} />
           <Route
+            path="/admin"
+            element={<Navigate to="/admin/dashboard" replace />}
+          />
+          <Route
             path="/admin/dashboard"
             element={
               <ProtectedRoute>
