@@ -212,6 +212,22 @@ export default function Navbar() {
                   {currentUser.email}
                 </div>
 
+                <Link
+                  to="/profile"
+                  role="menuitem"
+                  onClick={() => setAccountMenuOpen(false)}
+                  style={{
+                    display: "block",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    color: tokens.text,
+                    textDecoration: "none",
+                    fontSize: 13.5,
+                  }}
+                >
+                  Profile
+                </Link>
+
                 <button
                   type="button"
                   role="menuitem"
