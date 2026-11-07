@@ -132,7 +132,7 @@ export default function Interview() {
       const assistantContent = [
         feedbackText,
         nextQuestion?.question_text,
-        response.message,
+        response.message?.assistant_content,
       ].filter(Boolean).join("\n\n");
 
       if (assistantContent) {
