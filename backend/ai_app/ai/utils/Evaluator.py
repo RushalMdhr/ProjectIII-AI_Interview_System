@@ -282,7 +282,7 @@ def evaluate_candidate_answer(asked_question,candidate_answer,expected_answer,di
     if asked_question and candidate_answer and expected_answer and dimensions:
         print("everythings fine ! ")
     else:
-        return False    
+        return {'overall_score': 2.0, 'dimension_scores': {'suspicious_break': {'score': 0.0, 'weight': 1.0, 'reason': "review by yourself"}}}
     if isinstance(dimensions, str):
         try:
             dimensions = json.loads(dimensions)
@@ -295,5 +295,5 @@ def evaluate_candidate_answer(asked_question,candidate_answer,expected_answer,di
         dimensions=dimensions,
         model=ollama_model,
     )
-    print(result)
+    print("G EVAL RESULT : ",json.dumps(result, indent=2, default=str))
     return result
