@@ -26,8 +26,19 @@ class InterviewFlowTests(TestCase):
 		self.client = APIClient()
 		self.client.force_authenticate(user=self.user)
 
-	@patch("chats.views.generate_interview_intro", return_value="Please introduce yourself.")
-	def test_start_prefetch_and_answer_return_feedback(self, _generate_intro):
+	@patch(
+		"chats.views.get_question_for_state",
+		return_value={
+			"status": "success",
+			"question": {
+				"id": None,
+				"question": "Please introduce yourself.",
+				"answer": "",
+				"difficulty": "easy",
+			},
+		},
+	)
+	def test_start_prefetch_and_answer_return_feedback(self, _get_question):
 		start_url = reverse("start_interview", kwargs={"session_id": self.session.id})
 		response = self.client.post(start_url)
 
@@ -61,7 +72,19 @@ class InterviewFlowTests(TestCase):
 			"difficulty": "medium",
 		}
 		with (
-			patch("chats.views.evaluate_interview_answer", return_value=(8, "Clear and relevant.")),
+			patch(
+				"chats.views.evaluate_candidate_answer",
+				return_value={
+					"overall_score": 8,
+					"dimension_scores": {
+						"clarity": {
+							"score": 8,
+							"weight": 1,
+							"reason": "Clear and relevant.",
+						},
+					},
+				},
+			),
 			patch("chats.views.embed_text", return_value=[0.0] * 768),
 			patch(
 				"chats.views.get_next_questions",
@@ -76,7 +99,7 @@ class InterviewFlowTests(TestCase):
 
 		self.assertEqual(answer_response.status_code, 201)
 		opening_attempt.refresh_from_db()
-		self.assertEqual(opening_attempt.rating, 8)
+		self.assertEqual(opening_attempt.rating["overall_score"], 8)
 		self.assertEqual(opening_attempt.candidate_answer, "I would start with clear resource boundaries.")
 		self.assertEqual(
 			answer_response.data["interview_feedback"]["feedback"],
@@ -87,4 +110,58 @@ class InterviewFlowTests(TestCase):
 		self.assertEqual(
 			answer_response.data["next_question"]["question_text"],
 			next_question["question"],
+		)
+		self.assertEqual(
+			answer_response.data["interview_feedback"]["average_overall_score"],
+			8,
+		)
+		self.assertEqual(
+			answer_response.data["next_question"]["average_overall_score"],
+			8,
+		)
+
+		next_next_question = {
+			"id": None,
+			"question": "How do you handle production incidents?",
+			"answer": "",
+			"difficulty": "medium",
+		}
+		with (
+			patch(
+				"chats.views.evaluate_candidate_answer",
+				return_value={
+					"overall_score": 6,
+					"dimension_scores": {
+						"clarity": {
+							"score": 6,
+							"weight": 1,
+							"reason": "A reasonable answer.",
+						},
+					},
+				},
+			),
+			patch(
+				"chats.views.get_next_questions",
+				return_value={"status": "success", "question": next_next_question},
+			),
+		):
+			second_answer_response = self.client.post(
+				reverse("send_message"),
+				{
+					"session": self.session.id,
+					"user_content": "I investigate logs, metrics, and alerts.",
+				},
+				format="json",
+			)
+
+		self.assertEqual(second_answer_response.status_code, 201)
+		self.assertEqual(
+			second_answer_response.data["interview_feedback"]["average_overall_score"],
+			7,
+		)
+		self.assertEqual(
+			InterviewFeedback.objects.filter(session=self.session)
+			.exclude(average_overall_score=7)
+			.count(),
+			0,
 		)

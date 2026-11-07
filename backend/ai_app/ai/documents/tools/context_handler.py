@@ -287,7 +287,8 @@ def get_next_questions(
 	session=None,
 	prev_question="",
 	result=None,
-	history=None
+	history=None,
+	allow_repeat=True,
 ):
 	if session is None:
 		session = ChatSession.objects.get(id=session_id, user=user, archived=False)
@@ -332,13 +333,23 @@ def get_next_questions(
 
 	
 	if not next_question:
+		explicit_action = _explicit_interview_action(user_content)
+		if explicit_action == "REPEAT":
+			action = "REPEAT" if allow_repeat else "SKIP"
+		else:
+			action = explicit_action or "CONTINUE"
 		return {
 			"status": "success",
 			"role": role,
 			"generated": True,
 			"question": {
 				"id": None,
-				"question": _default_question(role, session.current_difficulty),
+				"action": action,
+				"question": (
+					prev_question
+					if action == "REPEAT"
+					else _default_question(role, session.current_difficulty)
+				),
 				"answer": "",
 				"role": role,
 				"experience": "any",
@@ -360,6 +371,8 @@ def get_next_questions(
 	)
 	ai_response = demo_question.get("data", {}) if demo_question.get("success") else {}
 	explicit_action = _explicit_interview_action(user_content)
+	if explicit_action == "REPEAT" and not allow_repeat:
+		explicit_action = "SKIP"
 	action = explicit_action or "CONTINUE"
 	model_action = ai_response.get("action")
 	if isinstance(model_action, str):

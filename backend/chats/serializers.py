@@ -14,6 +14,7 @@ class InterviewFeedbackSerializer(serializers.ModelSerializer):
             'question_text',
             'candidate_answer',
             'rating',
+            'average_overall_score',
             'feedback',
             'question_difficulty',
             'created_at',
