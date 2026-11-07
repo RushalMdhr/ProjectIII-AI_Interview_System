@@ -9,11 +9,10 @@ from ai_app.ai.utils.embeddings import embed_text
 from ai_app.ai.utils.message import assistant_talking, user_talking
 from ai_app.ai.utils.chats_handler import (
     chats_handler,
+    evaluate_interview_answer_llm,
     generate_chat_title,
     generate_interview_intro,
 )
-# Previous text-only evaluator retained for reference:
-# from ai_app.ai.utils.chats_handler import evaluate_interview_answer_llm
 from ai_app.ai.utils.Evaluator import evaluate_candidate_answer
 
 from .models import ChatSession, ChatMessage, InterviewFeedback
@@ -25,9 +24,7 @@ from .serializers import (
 )
 
 from ai_app.ai.documents.tools.context_handler import (
-    generate_interviewer_response,
     get_next_questions,
-    next_interview_category,
     prefetch_next_questions,
 )
 
@@ -64,44 +61,6 @@ def _create_question_attempt(session, question):
         candidate_answer="",
         # question_number=session.question_count + 1,
         question_difficulty=question.get("difficulty", session.current_difficulty),
-    )
-
-
-def _find_similar_answer(candidate_answer, previous_answers):
-    normalized_answer = " ".join(re.findall(r"\w+", candidate_answer.casefold()))
-    if not normalized_answer:
-        return False
-
-    return any(
-        _answers_are_similar(normalized_answer, previous_answer)
-        for previous_answer in previous_answers
-    )
-
-
-def _answers_are_similar(normalized_answer, previous_answer):
-    normalized_previous = " ".join(
-        re.findall(r"\w+", previous_answer.casefold())
-    )
-    if normalized_answer == normalized_previous:
-        return True
-    return (
-        min(len(normalized_answer), len(normalized_previous)) >= 30
-        and SequenceMatcher(
-            None,
-            normalized_answer,
-            normalized_previous,
-            autojunk=False,
-        ).ratio() >= 0.9
-    )
-
-
-def _count_similar_answers(candidate_answer, previous_answers):
-    normalized_answer = " ".join(re.findall(r"\w+", candidate_answer.casefold()))
-    if not normalized_answer:
-        return 0
-    return sum(
-        _answers_are_similar(normalized_answer, previous_answer)
-        for previous_answer in previous_answers
     )
 
 
@@ -168,10 +127,7 @@ def start_interview(request, session_id):
         },
     )
     session.question_count = 1
-    session.current_state = "introduction"
-    session.save(
-        update_fields=["interview_role", "current_state", "question_count", "updated_at"]
-    )
+    session.save(update_fields=["interview_role", "question_count", "updated_at"])
     print("[ START_INTERVIEW ]feedback : ",session_id,flush=True)
 
     return Response(
@@ -180,34 +136,6 @@ def start_interview(request, session_id):
             "interview_feedback": InterviewFeedbackSerializer(attempt).data,
         },
         status=status.HTTP_201_CREATED,
-    )
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_interview_history(request, session_id):
-    try:
-        session = ChatSession.objects.get(
-            id=session_id,
-            user=request.user,
-            use_case="interview_assessment",
-        )
-    except ChatSession.DoesNotExist:
-        return Response(
-            {"error": "Interview session not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    attempts = session.interview_feedbacks.order_by("created_at", "id")
-    return Response(
-        {
-            "session": ChatSessionSerializer(session).data,
-            "interview_feedback": InterviewFeedbackSerializer(
-                attempts,
-                many=True,
-            ).data,
-        },
-        status=status.HTTP_200_OK,
     )
 
 
@@ -235,6 +163,64 @@ def prefetch_interview_questions(request, session_id):
     if result["status"] == "missing_role":
         return Response({"error": "Add your target role to your profile."}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"prefetched_count": len(result["question_ids"])}, status=status.HTTP_200_OK)
+
+
+def _get_chat_history(session, limit=None,use_case='general_chat'):
+    # Usage (gets ALL messages):
+    # history = get_chat_history(session)
+
+    # Usage (gets only last 5):
+    # history = get_chat_history(session, limit=5)
+
+    # Base query
+    if use_case == 'general_chat':
+        queryset = ChatMessage.objects.filter(session=session)
+    elif use_case == 'interview_assessment':
+        queryset = InterviewFeedback.objects.filter(session=session)
+    else:
+        raise ValueError(f"Unsupported chat history use case: {use_case}")
+    
+    # Apply limit only if it's not None (infinity)
+    if limit is not None:
+        recent_messages = list(queryset.order_by('-created_at')[:limit])
+        recent_messages.reverse() # Chronological order
+    else:
+        recent_messages = list(queryset.order_by('created_at')) # Chronological order
+
+    # Format for LLM
+    history_text = ""
+    for msg in recent_messages:
+        if use_case == 'general_chat':
+            if msg.user_content:
+                history_text += f"User: {msg.user_content}\n"
+            if msg.assistant_content:
+                history_text += f"Assistant: {msg.assistant_content}\n"
+        else:
+            if msg.question_text:
+                history_text += f"Assistant: {msg.question_text}\n"
+            if msg.candidate_answer:
+                history_text += f"User: {msg.candidate_answer}\n"
+            # if msg.feedback:
+            #     history_text += f"Assistant: {msg.feedback}\n"
+
+    return history_text.strip()
+
+def _update_interview_state(session):
+    state_sequences = {
+        "easy": "IBEST",
+        "medium": "IBBEESST",
+        "hard": "IIBBEESSTT",
+    }
+    state_names = {
+        "I": "INTRODUCTION",
+        "B": "BEHAVIOURAL",
+        "E": "EXPERIENCE",
+        "S": "SITUATIONAL",
+        "T": "technical",
+    }
+    sequence = state_sequences[session.current_difficulty]
+    next_question_index = min(session.question_count, len(sequence) - 1)
+    session.current_state = state_names[sequence[next_question_index]]
 
 
 def _send_interview_answer(request, session, user_content):
@@ -270,256 +256,20 @@ def _send_interview_answer(request, session, user_content):
             {"error": "The pending question is missing its question text."},
             status=status.HTTP_409_CONFLICT,
         )
-    expected_answer = attempt.question_answer or (
-        attempt.asked_questions.answer if attempt.asked_questions_id else ""
-    )
-    previous_attempts = list(
-        session.interview_feedbacks
-        .exclude(id=attempt.id)
-        .exclude(candidate_answer="")
-        .order_by("created_at")
-        .values("question_text", "candidate_answer", "rating")
-    )
-    prior_answer_texts = [
-        previous["candidate_answer"]
-        for previous in previous_attempts
-        if previous["rating"] is not None
-    ]
-    similar_answer_count = _count_similar_answers(
-        user_content,
-        prior_answer_texts,
-    )
-    repetition_count = similar_answer_count + 1 if similar_answer_count else 0
-    matching_previous_answer = next(
-        (
-            previous_answer
-            for previous_answer in reversed(prior_answer_texts)
-            if _find_similar_answer(user_content, [previous_answer])
-        ),
-        None,
-    )
+    expected_answer = attempt.asked_questions.answer if attempt.asked_questions_id else ""
+    dimensions = attempt.asked_questions.weights if attempt.asked_questions_id else []
     try:
-        action_response = generate_interviewer_response(
-            result=None,
-            prev_question=question_text,
-            next_question={"question": question_text},
-            candidate_answer=user_content,
-            repetition_count=repetition_count,
-            matching_previous_answer=matching_previous_answer,
-        )
-        action = action_response["action"]
+        print("[ CHECKER ] : ",flush=True)
 
-        if action in {"REPEAT", "REVIEW"}:
-            attempt.question_text = action_response["question"]
-            attempt.feedback = None
-            attempt.save(update_fields=["question_text", "feedback", "updated_at"])
-            serialized_attempt = InterviewFeedbackSerializer(attempt).data
-            return Response(
-                {
-                    "session": ChatSessionSerializer(session).data,
-                    "interview_feedback": serialized_attempt,
-                    "next_question": serialized_attempt,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-
-        if action not in {"CONTINUE", "SKIP"}:
-            raise ValueError(f"Unsupported interviewer action: {action}")
-
-        next_category = next_interview_category(session)
-
-        if action == "SKIP":
-            next_question_result = (
-                get_next_questions(
-                    user=request.user,
-                    session_id=session.id,
-                    category=next_category,
-                    top_k=3,
-                    candidate_ids=attempt.prefetched_question_ids,
-                    session=session,
-                )
-                if next_category else None
-            )
-            attempt.candidate_answer = user_content
-            attempt.rating = None
-            attempt.feedback = None
-            attempt.save(
-                update_fields=["candidate_answer", "rating", "feedback", "updated_at"]
-            )
-            next_attempt = None
-            completion_message = None
-
-            if next_question_result and next_question_result["status"] == "success":
-                next_attempt = _create_question_attempt(
-                    session,
-                    next_question_result["question"],
-                )
-                session.question_count += 1
-                session.current_state = next_category
-            else:
-                session.halted = True
-                session.archived = True
-                completion_message = (
-                    "The interview ended because there are no unused questions "
-                    f"for the {next_category or 'next'} category."
-                    if next_category
-                    else "The interview is complete."
-                )
-
-            session.save(update_fields=[
-                "current_state",
-                "question_count",
-                "halted",
-                "archived",
-                "updated_at",
-            ])
-            return Response(
-                {
-                    "session": ChatSessionSerializer(session).data,
-                    "interview_feedback": InterviewFeedbackSerializer(attempt).data,
-                    "next_question": (
-                        InterviewFeedbackSerializer(next_attempt).data
-                        if next_attempt else None
-                    ),
-                    "message": completion_message,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-
-        dimensions = attempt.asked_questions.weights if attempt.asked_questions_id else []
-        if not dimensions:
-            dimensions = [{"label": session.current_state, "score": 1.0}]
-        repeated_answer = repetition_count > 0
-
-        # Legacy evaluator replaced by the structured GEval result:
-        # rating, feedback = evaluate_interview_answer_llm(
-        #     question_text, expected_answer, user_content
-        # )
         geval_result = evaluate_candidate_answer(
             asked_question=question_text,
             expected_answer=expected_answer,
             candidate_answer=user_content,
             dimensions=dimensions,
-            history=previous_attempts,
         )
-        print("[ G EVAL ] : ", geval_result)
-        if not isinstance(geval_result, dict) or not isinstance(
-            geval_result.get("overall_score"), (int, float)
-        ):
-            raise ValueError("GEval returned an invalid evaluation result.")
-        rating = max(0, min(10, round(geval_result["overall_score"])))
-        _update_interview_level(session, rating)
-
-        next_question_result = (
-            get_next_questions(
-                user=request.user,
-                session_id=session.id,
-                category=next_category,
-                top_k=3,
-                candidate_ids=attempt.prefetched_question_ids,
-                session=session,
-            )
-            if next_category else None
-        )
-        interviewer_response = generate_interviewer_response(
-            result=geval_result,
-            prev_question=question_text,
-            next_question=(
-                next_question_result["question"]
-                if next_question_result and next_question_result["status"] == "success"
-                else None
-            ),
-            candidate_answer=user_content,
-            repetition_count=repetition_count,
-            matching_previous_answer=matching_previous_answer,
-        )
-        if interviewer_response["action"] in {"REPEAT", "REVIEW"}:
-            attempt.question_text = interviewer_response["question"]
-            attempt.feedback = None
-            attempt.save(update_fields=["question_text", "feedback", "updated_at"])
-            serialized_attempt = InterviewFeedbackSerializer(attempt).data
-            return Response(
-                {
-                    "session": ChatSessionSerializer(session).data,
-                    "interview_feedback": serialized_attempt,
-                    "next_question": serialized_attempt,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-        if interviewer_response["action"] == "SKIP":
-            attempt.candidate_answer = user_content
-            attempt.rating = None
-            attempt.feedback = None
-            attempt.save(
-                update_fields=["candidate_answer", "rating", "feedback", "updated_at"]
-            )
-            next_attempt = None
-            if next_question_result and next_question_result["status"] == "success":
-                next_attempt = _create_question_attempt(
-                    session,
-                    next_question_result["question"],
-                )
-                session.question_count += 1
-                session.current_state = next_category
-                completion_message = None
-            else:
-                session.halted = True
-                session.archived = True
-                completion_message = (
-                    "The interview ended because there are no unused questions "
-                    f"for the {next_category or 'next'} category."
-                    if next_category
-                    else "The interview is complete."
-                )
-            session.save(update_fields=[
-                "current_state",
-                "question_count",
-                "halted",
-                "archived",
-                "updated_at",
-            ])
-            return Response(
-                {
-                    "session": ChatSessionSerializer(session).data,
-                    "interview_feedback": InterviewFeedbackSerializer(attempt).data,
-                    "next_question": (
-                        InterviewFeedbackSerializer(next_attempt).data
-                        if next_attempt else None
-                    ),
-                    "message": completion_message,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-        if not interviewer_response["feedback"].strip():
-            raise ValueError("CONTINUE response did not include feedback.")
-        end_for_repeated_answer = (
-            repeated_answer
-            and repetition_count >= MAX_REPEATED_ANSWER_COUNT
-        )
-        if end_for_repeated_answer:
-            next_attempt = None
-            session.halted = True
-            session.archived = True
-            completion_message = "Interview ended."
-        elif next_question_result and next_question_result["status"] == "success":
-            next_attempt = _create_question_attempt(
-                session,
-                next_question_result["question"],
-            )
-            session.question_count += 1
-            session.current_state = next_category
-            completion_message = None
-        else:
-            next_attempt = None
-            session.archived = True
-            if next_category:
-                session.halted = True
-                completion_message = (
-                    "The interview ended because there are no unused questions "
-                    f"for the {next_category} category."
-                )
-            else:
-                completion_message = "The interview is complete."
+        history = _get_chat_history(session=session,use_case='interview_assessment')
+        print("[HISTORY] : ",history,flush=True)
+        print("[ G EVAL ] SUCESS !", geval_result)
 
     except Exception as error:
         print(f"[INTERVIEW] Answer processing failed: {error}", flush=True)
@@ -527,15 +277,82 @@ def _send_interview_answer(request, session, user_content):
             {"error": "Failed to evaluate the interview answer."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+    print("[ CHECKER ] : ",flush=True)
+# ___________________ update later __________________
+    rating = geval_result["overall_score"]
+    _update_interview_level(session, rating)
+    feedback = next(iter(geval_result["dimension_scores"].values()))['reason']
+    assistant_content = feedback
+    next_question = None
+    next_attempt = None
+
+    if rating <= 1:
+        session.halted = True
+        session.archived = True
+        assistant_content = (
+            f"{feedback}\n\nInterview paused because the answer was not relevant. "
+            "Please restart when you are ready to continue."
+        )
+    elif session.question_count >= session.max_questions:
+        session.archived = True
+        assistant_content = (
+            f"{feedback}\n\nInterview complete. Your selected question limit has been reached."
+        )
+    else:
+        result = get_next_questions(
+            user=request.user,
+            user_content=user_content,
+            session_id=session.id,
+            top_k=3,
+            candidate_ids=attempt.prefetched_question_ids,
+            session=session,
+	        prev_question=question_text,
+            result=geval_result,
+            history=history
+        )
+        print("[RESULT WITH GEVAL] : ",result)
+        if result.get("status") == "missing_role":
+            session.halted = True
+            session.archived = True
+            assistant_content = (
+                f"{feedback}\n\nInterview paused. Please add your target role to your profile."
+            )
+        else:
+            next_question = result["question"]
+            assistant_content = next_question.get("feedback") or feedback
+
+    if next_question and next_question.get("action") == "REPEAT":
+        attempt.candidate_answer = user_content
+        attempt.feedback = "REPEAT"
+        attempt.save(update_fields=["candidate_answer", "feedback", "updated_at"])
+        repeated_attempt = InterviewFeedback.objects.create(
+            session=session,
+            asked_questions=None,
+            question_text=next_question.get("question") or question_text,
+            candidate_answer="",
+            question_difficulty=attempt.question_difficulty or session.current_difficulty,
+        )
+        return Response(
+                {
+                    "session": ChatSessionSerializer(session).data,
+                    "interview_feedback": InterviewFeedbackSerializer(attempt).data,
+                    "next_question": InterviewFeedbackSerializer(repeated_attempt).data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+    _update_interview_state(session)
 
     attempt.candidate_answer = user_content
-    attempt.rating = rating
-    attempt.feedback = json.dumps({
-        "feedback_text": interviewer_response["feedback"],
-        "overall_score": geval_result["overall_score"],
-        "dimension_scores": geval_result.get("dimension_scores", {}),
-    })
+    attempt.rating = geval_result
+    attempt.feedback = assistant_content
     attempt.save(update_fields=["candidate_answer", "rating", "feedback", "updated_at"])
+
+    print("[ NEXT QUESTION ] : ",next_question,flush=True)
+    if next_question:
+        next_attempt = _create_question_attempt(session, next_question)
+        session.question_count += 1
+        print("[ NEXT QUESTION ] : ",next_question,flush=True)
 
     session.save(update_fields=[
         "current_difficulty",
@@ -553,7 +370,6 @@ def _send_interview_answer(request, session, user_content):
                 InterviewFeedbackSerializer(next_attempt).data
                 if next_attempt else None
             ),
-            "message": completion_message,
         },
         status=status.HTTP_201_CREATED,
     )

@@ -5,13 +5,14 @@ from .utils.request_groq import get_groq_client
 from ai_app.services import record_request
 
 
-def ai(msg, model="llama3.2:latest", tools="auto", user=None, use_case="general_chat", session=None):
+def ai(msg, model="llama3.2:latest", tools="auto", user=None, use_case="general_chat", session=None,format=None, temperature=0.1):
     started_at = time.perf_counter()
     try:
         response = ollama_client.chat(
             model=model,
             messages=msg,
-            options={"temperature": 0.1},
+            options={"temperature": temperature},
+            format=format
             # "top_p": 0.9,            # Standard
                 # "num_predict": 200,      # Short story (~200 tokens)
                 # "num_ctx": 4096,         # Enough for context
