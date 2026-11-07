@@ -5,6 +5,9 @@ from ai_app.ai.llm import ai
 from ai_app.ai.utils.message import system_talking,user_talking
 from ai_app.ai.utils.embeddings import embed_text
 
+import json
+import re
+
 
 def _default_question(role, difficulty):
 	print(
@@ -127,66 +130,100 @@ def prefetch_next_questions(user, session_id, attempt, top_k=3):
 	return {"status": "success", "question_ids": attempt.prefetched_question_ids}
 
 
-def _generate_better_response(result,prev_question,next_question,candidate_answer):
-	jod='{"action": "REPEAT | SKIP | CONTINUE ","feedback": "Natural conversational response","question": "if repeat question : Simplified previous question else next question"}'
+def _generate_better_response(result, prev_question, next_question, candidate_answer, history=None):
+	print("[INSIDE _generate_better_response ]",flush=True)
+	jod = '''{
+    "action": "REPEAT | SKIP | CONTINUE",
+    "feedback": "Your natural conversational response to the candidate (do not include internal scores).",
+    "question": "The text of the question to display next (Simplified previous question if REPEAT, otherwise the Next Question)."
+	}'''
 
-	prompt=f"""
-	You are an AI interviewer responsible for managing the interview conversation naturally and deciding the next interview action based on the candidate's response.
+	if history is None:
+		history = []
+	if isinstance(history, (list, tuple, dict)):
+		history_text = json.dumps(history, ensure_ascii=False)
+	else:
+		history_text = str(history) if history else "No prior conversation history."
+
+	prompt = f"""
+	You are an expert AI Interviewer managing a live interview. Your job is to read the candidate's response and decide the next conversational action.
 
 	### INPUT VARIABLES
-
 	- Evaluation Result: {result}
 	- Previous Question: {prev_question}
-	- Next Question: {next_question}
+	- Proposed Next Question: {next_question}
+	- Conversation History: {history_text}
 
-	### YOUR RESPONSIBILITIES
-
-	Determine exactly one action:
+	### DECISION LOGIC (Choose exactly ONE action)
 
 	**1. REPEAT**
-	- If the candidate requests repetition, clarification, or says they couldn't understand the question.
-	- Rephrase the previous question using simpler, clearer language.
-	- Preserve the original meaning.
-	- Do not provide hints or answers.
-	- Do not move to the next question.
+	- Trigger: The candidate asks to repeat, simplify, clarify, or explicitly says they didn't understand. (Also trigger if they ask for a hint).
+	- Action: Set action to "REPEAT". In the "question" field, provide a simplified/clearer version of the *Previous Question*. 
+	- Rule: Do NOT provide the actual answer. Do NOT move to the next question.
 
 	**2. SKIP**
-	- If the candidate explicitly requests to skip, pass, or says they don't know the answer.
-	- Respond with a short, natural acknowledgment.
-	- Proceed to the next question.
+	- Trigger: The candidate explicitly asks to skip, pass, or says "I don't know" / "Next question please".
+	- Action: Set action to "SKIP". Provide a brief, polite acknowledgment in the "feedback" field. Move to the *Proposed Next Question*.
 
 	**3. CONTINUE**
-	- If the candidate has answered the question.
-	- Use the evaluation result and dimension reasons to generate one short, natural sentence of feedback or encouragement.
-	- Avoid generic compliments.
-	- Do not invent strengths that are not supported by the evaluation.
-	- Proceed to the next question.
-
-	**4. REVIEW**
-	- If suspicious_break is true and overall_score is 0.0.
-	- Do not automatically assume the candidate is cheating.
-	- Request further answer verification instead of immediately proceeding.
-	- Do not generate normal evaluation feedback.
+	- Trigger: The candidate provides a genuine attempt at an answer (even if the answer is wrong or poor).
+	- Action: Set action to "CONTINUE". Use the Evaluation Result to write a brief, natural sentence of feedback (e.g., "Good point about X," or "Let's explore Y next"). Move to the *Proposed Next Question*.
+	- Rule: NEVER confuse a bad answer with a SKIP. If they tried to answer, it is CONTINUE.
 
 	### IMPORTANT RULES
-
-	- Never confuse a poor answer with a request to skip.
-	- A score of 0.0 alone does not indicate suspicious behavior.
-	- Candidate intent takes priority when deciding whether to repeat or skip.
-	- Keep responses conversational, short, and professional.
-	- Never expose internal evaluation scores or classification details.
+	1. **Conversational Tone:** The "feedback" field must sound like a human speaking, not a grading rubric. Never mention scores, dimensions, or classifications.
+	2. **No Looping:** If the history shows you have already repeated this question once, force a "SKIP" or "CONTINUE" instead. Do not get stuck in a REPEAT loop.
+	3. **Strict JSON Output:** Return ONLY valid JSON. Do not use Markdown (```json). Do not add text before or after the JSON.
 
 	### OUTPUT FORMAT
-
-	Return valid JSON only, without Markdown or additional text.
-
 	{jod}
 	"""
 	messages = [
 		{"role": "system", "content": prompt},
 		{"role": "user", "content": candidate_answer }
 		]
-	return ai(msg=messages)
+	raw_response = ai(msg=messages,format='json')
+	print("[RAW RESPONSE] : ",raw_response,flush=True)
+
+	# --- validate ---
+	try:
+		parsed = json.loads(raw_response)
+		print("[ PARSED ] : ",parsed,flush=True)
+	except (json.JSONDecodeError, TypeError) as e:
+		return {"success": False, "error": f"Invalid JSON: {e}", "raw": raw_response}
+
+	return {"success": True, "data": parsed}
+
+
+def _explicit_interview_action(candidate_answer):
+	answer = candidate_answer.strip().lower()
+	if re.search(r"\b(?:do not|don't|never)\s+(?:please\s+)?(?:repeat|skip)\b", answer):
+		return None
+	if re.search(
+		r"\b(?:"
+		r"(?:please\s+)?repeat(?:\s+(?:the|that|this)\s+question)?|"
+		r"(?:can|could|would)\s+you\s+(?:please\s+)?repeat|"
+		r"(?:can|could|would)\s+you\s+(?:please\s+)?(?:explain|clarify|rephrase)|"
+		r"say\s+(?:that|it)\s+again|"
+		r"rephrase|clarify|"
+		r"i\s+(?:do not|don't|did not|didn't|cannot|can't|could not|couldn't)\s+understand|"
+		r"what\s+does?\s+(?:that|this)\s+mean"
+		r")\b",
+		answer,
+	):
+		return "REPEAT"
+	if re.search(
+		r"\b(?:"
+		r"(?:please\s+)?skip(?:\s+(?:this|the question|it))?|"
+		r"(?:please\s+)?pass(?:\s+on\s+(?:this|the question|it))?|"
+		r"i\s+(?:do not|don't)\s+know(?:\s+the answer)?|"
+		r"i have no idea"
+		r")\b",
+		answer,
+	):
+		return "SKIP"
+	return None
+
 
 def get_next_questions(
 	user,
@@ -196,7 +233,8 @@ def get_next_questions(
 	candidate_ids=None,
 	session=None,
 	prev_question="",
-	result=None
+	result=None,
+	history=None
 ):
 	if session is None:
 		session = ChatSession.objects.get(id=session_id, user=user, archived=False)
@@ -214,7 +252,7 @@ def get_next_questions(
 
 	if not next_question and candidate_ids:
 		next_question = _retrieve_questions(session, role, top_k)
-		print("[context_handler] No questions found with candidate_ids; retried without filter", questions, flush=True)
+		print("[context_handler] No questions found with candidate_ids; retried without filter", next_question, flush=True)
 
 	if not next_question and session.current_difficulty is not None:
 		next_question = _retrieve_questions(
@@ -232,6 +270,7 @@ def get_next_questions(
 
 	
 
+	
 	if not next_question:
 		return {
 			"status": "success",
@@ -256,15 +295,41 @@ def get_next_questions(
 		result=result,
 		prev_question=prev_question,
 		next_question=selected_question,
-		candidate_answer=user_content
-		)
+		candidate_answer=user_content,
+		history=history,
+	)
+	ai_response = demo_question.get("data", {}) if demo_question.get("success") else {}
+	explicit_action = _explicit_interview_action(user_content)
+	action = explicit_action or "CONTINUE"
+	model_action = ai_response.get("action")
+	if isinstance(model_action, str):
+		model_action = model_action.strip().upper()
+	action_feedback = (
+		ai_response.get("feedback")
+		if model_action == action
+		else None
+	)
+	response_question = (
+		ai_response.get("question")
+		if action == "REPEAT"
+		else selected_question[1]
+	)
+	if not isinstance(response_question, str) or not response_question.strip():
+		response_question = prev_question if action == "REPEAT" else selected_question[1]
+	if not isinstance(response_question, str) or not response_question.strip():
+		response_question = selected_question[1]
+
 
 	return {
 		"status": "success",
 		"role": role,
 		"question": {
 			"id": selected_question[0],
-			"question": selected_question[1],
+			
+			"action" : action,
+			"feedback" : action_feedback,
+			"question": response_question,
+
 			"answer": selected_question[2],
 			"role": selected_question[3],
 			"experience": selected_question[4],
@@ -273,6 +338,5 @@ def get_next_questions(
 			"distance": None,
 			"source_id": selected_question[7],
 			"weights": selected_question[8] or [],
-			"demo question" : demo_question
 		},
 	}
