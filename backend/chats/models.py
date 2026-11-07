@@ -83,6 +83,7 @@ class InterviewFeedback(models.Model):
     
     prefetched_question_ids = models.JSONField(default=list, blank=True)
     rating = models.JSONField(null=True, blank=True)
+    average_overall_score = models.FloatField(null=True, blank=True)
     feedback = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

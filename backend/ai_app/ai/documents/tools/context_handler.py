@@ -84,13 +84,30 @@ def _role_for_session(user, session):
 # 		print("[ FETCHING NEXT QUESTION ] : ",flush=True)
 # 		return cur.fetchall()
 
-def _retrieve_questions(session, role, top_k, candidate_ids=None, match_difficulty=True):
+def _retrieve_questions(
+	session,
+	role,
+	top_k,
+	candidate_ids=None,
+	match_difficulty=True,
+	category=None,
+):
 	difficulty_filter = ""
 	candidate_filter = ""
+	category_filter = ""
 	params = [role]
 	if match_difficulty and session.current_difficulty is not None:
 		difficulty_filter = "AND iq.difficulty = %s"
 		params.append(session.current_difficulty)
+	if category:
+		category_filter = """
+			AND EXISTS (
+				SELECT 1
+				FROM unnest(iq.categories) AS question_category(category)
+				WHERE LOWER(category) = LOWER(%s)
+			)
+		"""
+		params.append(category)
 	params.append(session.id)
 	if candidate_ids:
 		placeholders = ", ".join(["%s"] * len(candidate_ids))
@@ -106,6 +123,7 @@ def _retrieve_questions(session, role, top_k, candidate_ids=None, match_difficul
 			FROM common_interviewquestions iq
 			WHERE (LOWER(iq.role) = LOWER(%s) OR LOWER(iq.role) = 'common')
 			{difficulty_filter}
+			{category_filter}
 			AND iq.id NOT IN (
 				SELECT asked_questions_id
 				FROM chats_interviewfeedback
@@ -116,6 +134,45 @@ def _retrieve_questions(session, role, top_k, candidate_ids=None, match_difficul
 		""", params)
 		print("[ FETCHING NEXT QUESTION ] : ",flush=True)
 		return cur.fetchall()
+
+
+def get_question_for_state(user, session, state):
+	role = _role_for_session(user, session)
+	if not role:
+		return {"status": "missing_role"}
+
+	questions = _retrieve_questions(
+		session,
+		role,
+		top_k=1,
+		category=state,
+	)
+	if not questions:
+		questions = _retrieve_questions(
+			session,
+			role,
+			top_k=1,
+			match_difficulty=False,
+			category=state,
+		)
+	if not questions:
+		return {"status": "no_questions", "category": state}
+
+	selected_question = questions[0]
+	return {
+		"status": "success",
+		"question": {
+			"id": selected_question[0],
+			"question": selected_question[1],
+			"answer": selected_question[2],
+			"role": selected_question[3],
+			"experience": selected_question[4],
+			"difficulty": selected_question[5],
+			"keywords": selected_question[6],
+			"source_id": selected_question[7],
+			"weights": selected_question[8] or [],
+		},
+	}
 
 
 def prefetch_next_questions(user, session_id, attempt, top_k=3):
@@ -200,25 +257,21 @@ def _explicit_interview_action(candidate_answer):
 	if re.search(r"\b(?:do not|don't|never)\s+(?:please\s+)?(?:repeat|skip)\b", answer):
 		return None
 	if re.search(
-		r"\b(?:"
-		r"(?:please\s+)?repeat(?:\s+(?:the|that|this)\s+question)?|"
-		r"(?:can|could|would)\s+you\s+(?:please\s+)?repeat|"
-		r"(?:can|could|would)\s+you\s+(?:please\s+)?(?:explain|clarify|rephrase)|"
-		r"say\s+(?:that|it)\s+again|"
-		r"rephrase|clarify|"
-		r"i\s+(?:do not|don't|did not|didn't|cannot|can't|could not|couldn't)\s+understand|"
-		r"what\s+does?\s+(?:that|this)\s+mean"
-		r")\b",
+		r"^(?:please\s+)?(?:repeat|rephrase|simplify|clarify)\b|"
+		r"\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:repeat|explain|clarify|rephrase|simplify)\b|"
+		r"\b(?:say|go over)\s+(?:that|it|the question)\s+again\b|"
+		r"\bi\s+(?:do not|don't|did not|didn't|cannot|can't|could not|couldn't)\s+understand\s+(?:(?:the|this|that)\s+question|what you mean|that)\b|"
+		r"^i\s+(?:do not|don't)\s+understand[.!?]*$|"
+		r"\bwhat\s+does?\s+(?:that|this)\s+question\s+mean\b",
 		answer,
 	):
 		return "REPEAT"
 	if re.search(
-		r"\b(?:"
-		r"(?:please\s+)?skip(?:\s+(?:this|the question|it))?|"
-		r"(?:please\s+)?pass(?:\s+on\s+(?:this|the question|it))?|"
-		r"i\s+(?:do not|don't)\s+know(?:\s+the answer)?|"
-		r"i have no idea"
-		r")\b",
+		r"^(?:please\s+)?(?:skip|pass)(?:\s+(?:this|this question|the question|it))?[.!?]*$|"
+		r"\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:skip|pass)(?:\s+(?:this|this question|the question|it))?\b|"
+		r"^next question please[.!?]*$|"
+		r"^i\s+(?:do not|don't)\s+know(?:\s+the answer)?[.!?]*$|"
+		r"^i have no idea[.!?]*$",
 		answer,
 	):
 		return "SKIP"
@@ -234,7 +287,8 @@ def get_next_questions(
 	session=None,
 	prev_question="",
 	result=None,
-	history=None
+	history=None,
+	allow_repeat=True,
 ):
 	if session is None:
 		session = ChatSession.objects.get(id=session_id, user=user, archived=False)
@@ -247,11 +301,17 @@ def get_next_questions(
 		role,
 		top_k,
 		candidate_ids=candidate_ids,
+		category=session.current_state,
 	)
 	print("[context_handler] questions found: ", len(next_question), flush=True)
 
 	if not next_question and candidate_ids:
-		next_question = _retrieve_questions(session, role, top_k)
+		next_question = _retrieve_questions(
+			session,
+			role,
+			top_k,
+			category=session.current_state,
+		)
 		print("[context_handler] No questions found with candidate_ids; retried without filter", next_question, flush=True)
 
 	if not next_question and session.current_difficulty is not None:
@@ -260,6 +320,7 @@ def get_next_questions(
 			role,
 			top_k,
 			match_difficulty=False,
+			category=session.current_state,
 		)
 		print(
 			"[context_handler] No questions found at current difficulty; "
@@ -272,13 +333,23 @@ def get_next_questions(
 
 	
 	if not next_question:
+		explicit_action = _explicit_interview_action(user_content)
+		if explicit_action == "REPEAT":
+			action = "REPEAT" if allow_repeat else "SKIP"
+		else:
+			action = explicit_action or "CONTINUE"
 		return {
 			"status": "success",
 			"role": role,
 			"generated": True,
 			"question": {
 				"id": None,
-				"question": _default_question(role, session.current_difficulty),
+				"action": action,
+				"question": (
+					prev_question
+					if action == "REPEAT"
+					else _default_question(role, session.current_difficulty)
+				),
 				"answer": "",
 				"role": role,
 				"experience": "any",
@@ -300,6 +371,8 @@ def get_next_questions(
 	)
 	ai_response = demo_question.get("data", {}) if demo_question.get("success") else {}
 	explicit_action = _explicit_interview_action(user_content)
+	if explicit_action == "REPEAT" and not allow_repeat:
+		explicit_action = "SKIP"
 	action = explicit_action or "CONTINUE"
 	model_action = ai_response.get("action")
 	if isinstance(model_action, str):
