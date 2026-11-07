@@ -228,26 +228,13 @@ def evaluate_interview_answer(
     dimensions,
     model,
     use_ideal_per_dimension=None,
-    history=None,
 ):
     """
     use_ideal_per_dimension: optional dict mapping dimension → bool.
     If None, ideal_answer is used for ALL dimensions.
     """
-    evaluation_input = question
-    if history:
-        history_text = "\n".join(
-            f"Question: {entry['question_text']}\nAnswer: {entry['candidate_answer']}"
-            for entry in history
-        )
-        evaluation_input = (
-            f"Current question: {question}\n\n"
-            "Previous interview responses (context only; evaluate only the current answer):\n"
-            f"{history_text}"
-        )
-
     test_case = LLMTestCase(
-        input=evaluation_input,
+        input=question,
         actual_output=answer,
         expected_output=ideal_answer,   # ← passed to GEval
     )
@@ -286,22 +273,16 @@ def evaluate_interview_answer(
 
 # In 5th sem we chose a unique project and with unknown dev language where i have to learn whole full stack and MERN in 3 month and time was so short that i thought i might not be able to make it out but guess what we created really great e commerce with multi vendor system
 
-def evaluate_candidate_answer(
-    asked_question,
-    candidate_answer,
-    expected_answer,
-    dimensions,
-    history=None,
-):
+def evaluate_candidate_answer(asked_question,candidate_answer,expected_answer,dimensions):
     print("[ INSIDE G EVAL ] : ",flush=True)
     print("asked_question  : ",asked_question,flush=True)
     print("candidate_answer  : ",candidate_answer,flush=True)
     print("expected_answer  : ",expected_answer,flush=True)
     print("dimensions  : ",dimensions,flush=True)
-    if asked_question and candidate_answer and dimensions:
+    if asked_question and candidate_answer and expected_answer and dimensions:
         print("everythings fine ! ")
     else:
-        return False
+        return False    
     if isinstance(dimensions, str):
         try:
             dimensions = json.loads(dimensions)
@@ -313,7 +294,6 @@ def evaluate_candidate_answer(
         ideal_answer=expected_answer,
         dimensions=dimensions,
         model=ollama_model,
-        history=history,
     )
     print(result)
     return result

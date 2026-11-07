@@ -29,10 +29,6 @@ class InterviewQuestions(models.Model):
     ])
     keywords = models.JSONField(default=list)  # or ArrayField
     source = models.ForeignKey(Document_Source, on_delete=models.CASCADE, related_name='questions')
-
-    categories = models.JSONField(default=list, blank=True)   # list[str]  → e.g. ["behavioral"]
-    weights = models.JSONField(default=list, blank=True)   # list[dict] → [{"label": ..., "score": ...}]
-    
     embedding = VectorField(dimensions=768, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

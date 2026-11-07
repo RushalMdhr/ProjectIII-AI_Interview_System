@@ -124,7 +124,7 @@ export default function Interview() {
       const response = await sendChatMessage(content, sessionId);
       const interviewFeedback = response.interview_feedback;
       const nextQuestion = response.next_question;
-      if (response.session?.halted) {
+      if (response.session?.halted || response.session?.archived) {
         setIsInterviewEnded(true);
       }
       const savedFeedback = interviewFeedback?.feedback;
@@ -138,7 +138,7 @@ export default function Interview() {
       ].filter(Boolean).join("\n\n");
       if (assistantContent) {
         setMessages((current) => [...current, {
-          id: `assistant-${Date.now()}`,
+          id: nextQuestion?.id || interviewFeedback?.id || `assistant-${Date.now()}`,
           role: "assistant",
           content: assistantContent,
         }]);
@@ -441,36 +441,27 @@ export default function Interview() {
 
           <div ref={messagesEndRef} />
         </main>
-
-        {hasStarted && (
-          <form className="interview-composer" onSubmit={handleSend}>
-            {/* Remove onPaste below to allow pasting again. */}
-            <textarea
-              ref={inputRef}
-              className="interview-input"
-              rows={1}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onPaste={(event) => event.preventDefault()}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  event.currentTarget.form.requestSubmit();
-                }
-              }}
-              placeholder="Send a message..."
-              disabled={isSending}
-            />
-
-            <button
-              className="interview-send"
-              type="submit"
-              disabled={isSending || !input.trim()}
-            >
-              <Send size={16} />
-              <span className="interview-send-label">Send</span>
-            </button>
-          </form>
+        {hasStarted && !isInterviewEnded && (
+        <form className="interview-composer" onSubmit={handleSend}>
+          <textarea
+            ref={inputRef}
+            className="interview-input"
+            rows={1}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form.requestSubmit();
+              }
+            }}
+            placeholder="Send a message..."
+            disabled={isSending}
+          />
+          <button className="interview-send" type="submit" disabled={isSending || !input.trim()}>
+            <Send size={16} /><span className="interview-send-label">Send</span>
+          </button>
+        </form>
         )}
 
         {error && <p className="interview-error">{error}</p>}

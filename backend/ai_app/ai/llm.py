@@ -1,13 +1,12 @@
 from ai_app.ai.utils.request_ollama import ollama_client
 from .utils.request_groq import groq_client
 
-def ai(msg, model="llama3.2:latest", tools='auto', temperature=0.1, format=None):
+def ai(msg,model="llama3.2:latest",tools='auto'):
     response = ollama_client.chat(
             model=model,
             messages=msg,
-            format=format,
             options={
-                "temperature": temperature,
+                "temperature": 0.1,      # Creative but not wild
                 # "top_p": 0.9,            # Standard
                 # "num_predict": 200,      # Short story (~200 tokens)
                 # "num_ctx": 4096,         # Enough for context
