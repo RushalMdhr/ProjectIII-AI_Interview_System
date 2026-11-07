@@ -248,7 +248,7 @@ any bad behaviour from the user like : saying he doesnot know or next question, 
 
 ### ________________________________________ EVALUATION ___________________________________________________________________
 
-def evaluate_interview_answer_llm(question, expected_answer, candidate_answer):
+def evaluate_interview_answer(question, expected_answer, candidate_answer, user=None, session=None):
     format = """{
     classification : ["IRELEVENT","REPEAT","AVAOID","GOOD","PASS"], # string format
     rating : # give number x out of 10, provide 0 unless good or pass classification, numberformat
@@ -282,7 +282,12 @@ format of json:
 Return only one valid JSON object matching the format above. Do not ask follow-up questions or include any text outside the JSON object.
 """
     print(f"[EVAL] prompt: {prompt}", flush=True)
-    raw = ai([system_talking(prompt),user_talking(candidate_answer)])
+    raw = ai(
+        [system_talking(prompt), user_talking(candidate_answer)],
+        user=user,
+        use_case="interview_assessment",
+        session=session,
+    )
     print(f"[EVAL] RAW: {raw!r}", flush=True)  # ← !r shows empty string clearly
 
     if not raw or not str(raw).strip():
@@ -336,7 +341,9 @@ def chats_handler(
     user_content,
     chat_history=None,
     context=None,
-    use_case="general_chat"
+    use_case="general_chat",
+    user=None,
+    session=None,
 ):
     """
     Prepare conversation context and generate an AI response.
@@ -407,14 +414,17 @@ def chats_handler(
 
     assistant_content = generate_response(
         use_case=use_case,
-        message=messages)
+        message=messages,
+        user=user,
+        session=session,
+    )
 
     return {
         "user_content": user_content,
         "assistant_content": assistant_content,
     }
 
-def generate_chat_title(user_content):
+def generate_chat_title(user_content, user=None, session=None):
     prompt = f"""
 You are a conversation title generator.
 
@@ -434,7 +444,9 @@ Rules:
 
     raw_title = generate_response(
         use_case="general_chat",
-        message=[system_talking(prompt)]
+        message=[system_talking(prompt)],
+        user=user,
+        session=session,
     )
 
     title = str(raw_title).strip()
@@ -465,7 +477,7 @@ Rules:
     return title
 
 
-def generate_interview_intro(candidate_name, role):
+def generate_interview_intro(candidate_name, role, user=None, session=None):
     question = (
         f"Hello, {candidate_name}. Could you introduce yourself and briefly "
         f"describe your experience relevant to the {role} role?"
@@ -481,6 +493,8 @@ Question: {question}
         response = generate_response(
             use_case="interview_assessment",
             message=[system_talking(prompt),user_talking('ready')],
+            user=user,
+            session=session,
         )
         response = str(response).strip()
         print("[OPEING ANSWER GENERATION] : ",response)

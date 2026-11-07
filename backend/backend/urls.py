@@ -28,6 +28,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path("test_connect", test_connect),
     path('chats/', include('chats.urls')),
+    path('ai/', include('ai_app.urls')),
 ]
 
 if settings.DEBUG:
