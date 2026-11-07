@@ -57,16 +57,14 @@ export default function Interview() {
       setSessionId(activeSessionId);
 
       const response = await startChatInterview(activeSessionId);
-      const opening =
-        response.interview_feedback?.question_text ||
-        response.message?.assistant_content;
+      const opening = response.interview_feedback?.question_text;
       if (!opening) {
         setError("The interview could not create its opening question.");
         return;
       }
 
       setMessages([{
-        id: response.interview_feedback?.id || response.message?.id || `assistant-${Date.now()}`,
+        id: response.interview_feedback.id || `assistant-${Date.now()}`,
         role: "assistant",
         content: opening,
       }]);
@@ -136,6 +134,7 @@ export default function Interview() {
         nextQuestion?.question_text,
         response.message?.assistant_content,
       ].filter(Boolean).join("\n\n");
+
       if (assistantContent) {
         setMessages((current) => [...current, {
           id: nextQuestion?.id || interviewFeedback?.id || `assistant-${Date.now()}`,
@@ -305,6 +304,7 @@ export default function Interview() {
           border: 1px solid rgba(255,255,255,.12);
           border-radius: 16px;
           background: rgba(255,255,255,.08);
+          font-size: 16px;
           line-height: 1.55;
           white-space: pre-wrap;
         }
@@ -337,8 +337,8 @@ export default function Interview() {
           overflow-y: hidden;
           background: rgba(255,255,255,.08);
           color: #fff;
-          font-size: 14px;
-          line-height: 20px;
+          font-size: 16px;
+          line-height: 24px;
         }
 
         .interview-input:focus { border-color: #45E0D0; }
@@ -347,12 +347,15 @@ export default function Interview() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
-          min-width: 100px;
+          gap: 9px;
+          min-width: 120px;
+          min-height: 48px;
+          padding: 0 18px;
           border: 0;
           border-radius: 12px;
           background: #45E0D0;
           color: #10152B;
+          font-size: 16px;
           font-weight: 700;
           cursor: pointer;
         }
@@ -463,7 +466,6 @@ export default function Interview() {
           </button>
         </form>
         )}
-
         {error && <p className="interview-error">{error}</p>}
       </div>
     </div>

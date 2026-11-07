@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Sparkles } from "lucide-react";
+import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { login, requestPasswordReset } from "../services/api";
 import HomeBackground from "../components/HomeBackground";
 
@@ -58,16 +58,23 @@ function GlobalStyle() {
       }
 
       .lg-icon-btn {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
         background: none;
         border: none;
         cursor: pointer;
         color: ${tokens.textMuted};
-        font-size: 15px;
-        padding: 4px;
-        line-height: 1;
+        padding: 0;
       }
 
       .lg-icon-btn:hover { color: ${tokens.text}; }
+      .lg-icon-btn:focus-visible {
+        outline: 2px solid ${tokens.teal};
+        outline-offset: 2px;
+        border-radius: 5px;
+      }
 
       .lg-link {
         color: ${tokens.teal};
@@ -251,7 +258,11 @@ function Login() {
 
       localStorage.setItem("currentUser", JSON.stringify(res.user));
 
-      navigate(location.state?.from || "/");
+      navigate(
+        res.user?.is_superuser
+          ? "/admin/dashboard"
+          : location.state?.from || "/",
+      );
 
     } catch (err) {
       console.error("Login error:", err);
@@ -411,9 +422,11 @@ function Login() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="lg-icon-btn"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-pressed={showPassword}
                       style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)" }}
                     >
-                      {showPassword ? "🙈" : "👁️"}
+                      {showPassword ? <EyeOff size={18} strokeWidth={1.8} /> : <Eye size={18} strokeWidth={1.8} />}
                     </button>
                   </div>
                 </div>}
