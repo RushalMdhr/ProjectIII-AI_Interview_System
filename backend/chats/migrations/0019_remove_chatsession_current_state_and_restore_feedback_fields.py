@@ -3,13 +3,24 @@
 from django.db import migrations, models
 
 
+def create_missing_interview_feedback_table(apps, schema_editor):
+    table_name = apps.get_model('chats', 'InterviewFeedback')._meta.db_table
+    if table_name not in schema_editor.connection.introspection.table_names():
+        schema_editor.create_model(apps.get_model('chats', 'InterviewFeedback'))
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
         ('chats', '0018_chatsession_current_state'),
+        ('common', '0018_interviewquestions_categories_and_more'),
     ]
 
     operations = [
+        migrations.RunPython(
+            create_missing_interview_feedback_table,
+            migrations.RunPython.noop,
+        ),
         migrations.RemoveField(
             model_name='chatsession',
             name='current_state',

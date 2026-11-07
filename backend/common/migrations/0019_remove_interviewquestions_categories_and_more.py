@@ -14,8 +14,4 @@ class Migration(migrations.Migration):
             model_name='interviewquestions',
             name='categories',
         ),
-        migrations.RemoveField(
-            model_name='interviewquestions',
-            name='weights',
-        ),
     ]

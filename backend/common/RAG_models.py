@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from pgvector.django import VectorField, HnswIndex
 
 
@@ -28,6 +29,9 @@ class InterviewQuestions(models.Model):
         ('hard', 'Hard')
     ])
     keywords = models.JSONField(default=list)  # or ArrayField
+    weights = models.JSONField(default=list, blank=True)
+    categories = ArrayField(models.TextField(), default=list, blank=True)
+    
     source = models.ForeignKey(Document_Source, on_delete=models.CASCADE, related_name='questions')
     embedding = VectorField(dimensions=768, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -45,4 +49,3 @@ class InterviewQuestions(models.Model):
 
     def __str__(self):
         return self.question[:50]
-
