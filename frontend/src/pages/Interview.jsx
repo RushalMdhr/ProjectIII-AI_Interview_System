@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Bot, LoaderCircle, Play, Send, UserRound } from "lucide-react";
@@ -20,6 +19,7 @@ export default function Interview() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const wasSendingRef = useRef(false);
+  
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [hasStarted, setHasStarted] = useState(false);
@@ -95,7 +95,6 @@ export default function Interview() {
     if (wasSendingRef.current && !isSending) {
       inputRef.current?.focus();
     }
-
     wasSendingRef.current = isSending;
   }, [isSending]);
 
@@ -122,9 +121,8 @@ export default function Interview() {
       const response = await sendChatMessage(content, sessionId);
       const interviewFeedback = response.interview_feedback;
       const nextQuestion = response.next_question;
-      if (response.session?.halted || response.session?.archived) {
-        setIsInterviewEnded(true);
-      }
+      const interviewEnded = response.session?.halted || response.session?.archived;
+      setIsInterviewEnded(Boolean(interviewEnded));
       const savedFeedback = interviewFeedback?.feedback;
       const feedbackText = typeof savedFeedback === "string"
         ? savedFeedback
@@ -143,6 +141,9 @@ export default function Interview() {
         }]);
       } else {
         setError(response.error || "The interview did not return a reply.");
+      }
+      if (interviewEnded) {
+        navigate(`/results?session=${sessionId}`, { replace: true });
       }
     } catch (requestError) {
       setError(
@@ -361,7 +362,7 @@ export default function Interview() {
         }
 
         .interview-send:disabled {
-          cursor: wait;
+          cursor: progress;
           opacity: .55;
         }
 
@@ -458,7 +459,7 @@ export default function Interview() {
                 event.currentTarget.form.requestSubmit();
               }
             }}
-            placeholder="Send a message..."
+            placeholder="Type your answer..."
             disabled={isSending}
           />
           <button className="interview-send" type="submit" disabled={isSending || !input.trim()}>
