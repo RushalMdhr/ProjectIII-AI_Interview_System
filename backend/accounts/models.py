@@ -23,6 +23,13 @@ class User(AbstractUser):
         null=True
     )
 
+    highest_score = models.FloatField(null=True, blank=True)
+    highest_introduction_score = models.FloatField(null=True, blank=True)
+    highest_experience_score = models.FloatField(null=True, blank=True)
+    highest_behavioral_score = models.FloatField(null=True, blank=True)
+    highest_situational_score = models.FloatField(null=True, blank=True)
+    highest_technical_score = models.FloatField(null=True, blank=True)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 

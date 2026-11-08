@@ -9,11 +9,11 @@ class ChatSession(models.Model):
         ("hard", "Hard"),
     ]
     STATE_CHOICES = [
-        ("introduction", "INTRODUCTION"),
-        ("experience", "EXPERIENCE"),
-        ("behavioral", "BEHAVIORAL"),
-        ("situational", "SITUATIONAL"),
-        ("technical", "TECHNICAL"),
+        ("introduction", "introduction"),
+        ("experience", "experience"),
+        ("behavioral", "behavioral"),
+        ("situational", "situational"),
+        ("technical", "technical"),
     ]
     USE_CASE_CHOICES = [
         ("general_chat", "General Chat"),
@@ -36,7 +36,13 @@ class ChatSession(models.Model):
     question_count = models.PositiveSmallIntegerField(default=0)
     interview_role = models.CharField(max_length=150, null=True, blank=True)
     halted = models.BooleanField(default=False)
-    
+    average_overall_score = models.FloatField(null=True, blank=True)
+    average_introduction_score = models.FloatField(null=True, blank=True)
+    average_experience_score = models.FloatField(null=True, blank=True)
+    average_behavioral_score = models.FloatField(null=True, blank=True)
+    average_situational_score = models.FloatField(null=True, blank=True)
+    average_technical_score = models.FloatField(null=True, blank=True)
+
     archived = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -80,6 +86,12 @@ class InterviewFeedback(models.Model):
     question_text = models.TextField(blank=True) #hamro question sodheko wala
     # question_answer = models.TextField(blank=True) # expected answer from the question
     candidate_answer = models.TextField(blank=True) # answer from the candidate
+    category = models.CharField(
+        max_length=30,
+        choices=ChatSession.STATE_CHOICES,
+        blank=True,
+        default="",
+    )
     
     prefetched_question_ids = models.JSONField(default=list, blank=True)
     rating = models.JSONField(null=True, blank=True)

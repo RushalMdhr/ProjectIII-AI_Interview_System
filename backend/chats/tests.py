@@ -45,6 +45,7 @@ class InterviewFlowTests(TestCase):
 		self.assertEqual(response.status_code, 201)
 		opening_attempt = InterviewFeedback.objects.get(session=self.session)
 		self.assertEqual(opening_attempt.question_text, "Please introduce yourself.")
+		self.assertEqual(opening_attempt.category, "introduction")
 		self.assertEqual(
 			response.data["interview_feedback"]["question_text"],
 			"Please introduce yourself.",
@@ -107,6 +108,7 @@ class InterviewFlowTests(TestCase):
 		)
 		next_attempt = InterviewFeedback.objects.get(question_text=next_question["question"])
 		self.assertEqual(next_attempt.question_text, next_question["question"])
+		self.assertEqual(next_attempt.category, "behavioral")
 		self.assertEqual(
 			answer_response.data["next_question"]["question_text"],
 			next_question["question"],
@@ -165,3 +167,114 @@ class InterviewFlowTests(TestCase):
 			.count(),
 			0,
 		)
+
+	def test_session_category_averages_update_user_high_scores(self):
+		from chats.views import _create_question_attempt, _update_session_scores
+
+		introduction_attempt = _create_question_attempt(
+			self.session,
+			{"question": "Introduction question", "difficulty": "easy"},
+		)
+		introduction_attempt.rating = {"overall_score": 8}
+		introduction_attempt.save(update_fields=["rating"])
+		self.session.current_state = "behavioral"
+		behavioral_attempt = _create_question_attempt(
+			self.session,
+			{"question": "Behavioral question", "difficulty": "easy"},
+		)
+		behavioral_attempt.rating = {"overall_score": 6}
+		behavioral_attempt.save(update_fields=["rating"])
+		self.session.halted = True
+		self.session.save(update_fields=["halted"])
+
+		average = _update_session_scores(self.session)
+
+		self.session.refresh_from_db()
+		self.user.refresh_from_db()
+		self.assertEqual(average, 7)
+		self.assertEqual(self.session.average_introduction_score, 8)
+		self.assertEqual(self.session.average_behavioral_score, 6)
+		self.assertIsNone(self.session.average_experience_score)
+		self.assertEqual(self.user.highest_score, 7)
+		self.assertEqual(self.user.highest_introduction_score, 8)
+		self.assertEqual(self.user.highest_behavioral_score, 6)
+
+	@patch(
+		"chats.views.get_question_for_state",
+		return_value={
+			"status": "success",
+			"question": {
+				"id": None,
+				"question": "Please introduce yourself.",
+				"difficulty": "easy",
+			},
+		},
+	)
+	def test_completed_interview_persists_category_averages(
+		self, _get_question
+	):
+		self.session.max_questions = 2
+		self.session.save(update_fields=["max_questions"])
+		start_response = self.client.post(
+			reverse("start_interview", kwargs={"session_id": self.session.id})
+		)
+		self.assertEqual(start_response.status_code, 201)
+
+		next_question = {
+			"id": None,
+			"question": "How do you handle a team conflict?",
+			"difficulty": "medium",
+		}
+		evaluation_results = [
+			{
+				"overall_score": 8,
+				"dimension_scores": {
+					"clarity": {"score": 8, "weight": 1, "reason": "Clear."},
+				},
+			},
+			{
+				"overall_score": 6,
+				"dimension_scores": {
+					"clarity": {"score": 6, "weight": 1, "reason": "Adequate."},
+				},
+			},
+		]
+		with (
+			patch(
+				"chats.views.evaluate_candidate_answer",
+				side_effect=evaluation_results,
+			),
+			patch("chats.views.embed_text", return_value=[0.0] * 768),
+			patch(
+				"chats.views.get_next_questions",
+				return_value={"status": "success", "question": next_question},
+			),
+		):
+			first_response = self.client.post(
+				reverse("send_message"),
+				{
+					"session": self.session.id,
+					"user_content": "I would clarify the issue and find a solution.",
+				},
+				format="json",
+			)
+			second_response = self.client.post(
+				reverse("send_message"),
+				{
+					"session": self.session.id,
+					"user_content": "I listen to both sides and agree on actions.",
+				},
+				format="json",
+			)
+
+		self.assertEqual(first_response.status_code, 201)
+		self.assertEqual(second_response.status_code, 201)
+		self.session.refresh_from_db()
+		self.user.refresh_from_db()
+		self.assertEqual(self.session.average_overall_score, 7)
+		self.assertEqual(self.session.average_introduction_score, 8)
+		self.assertEqual(self.session.average_behavioral_score, 6)
+		self.assertTrue(self.session.halted)
+		self.assertEqual(self.user.highest_score, 7)
+		self.assertEqual(self.user.highest_introduction_score, 8)
+		self.assertEqual(self.user.highest_behavioral_score, 6)
