@@ -123,6 +123,18 @@ def _update_session_scores(session):
     session.interview_feedbacks.update(average_overall_score=average)
 
     if session.halted:
+        if not session.previous_high_scores:
+            user = User.objects.get(pk=session.user_id)
+            session.previous_high_scores = {
+                "highest_score": user.highest_score,
+                "highest_introduction_score": user.highest_introduction_score,
+                "highest_experience_score": user.highest_experience_score,
+                "highest_behavioral_score": user.highest_behavioral_score,
+                "highest_situational_score": user.highest_situational_score,
+                "highest_technical_score": user.highest_technical_score,
+            }
+            session.save(update_fields=["previous_high_scores", "updated_at"])
+
         highest_scores = {
             "highest_score": session.average_overall_score,
             "highest_introduction_score": session.average_introduction_score,
@@ -955,6 +967,36 @@ def get_messages(request, session_id):
         serializer.data,
         status=status.HTTP_200_OK
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_interview_results(request, session_id):
+    try:
+        session = ChatSession.objects.get(
+            id=session_id,
+            user=request.user,
+            use_case="interview_assessment",
+        )
+    except ChatSession.DoesNotExist:
+        return Response(
+            {"error": "Interview session not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    results = {
+        "session": ChatSessionSerializer(session).data,
+        "previous_high_scores": session.previous_high_scores,
+    }
+    if request.query_params.get("include") == "review":
+        attempts = session.interview_feedbacks.exclude(
+            candidate_answer="",
+        ).select_related("asked_questions").order_by("created_at", "id")
+        results["questions"] = InterviewFeedbackSerializer(
+            attempts,
+            many=True,
+        ).data
+    return Response(results, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

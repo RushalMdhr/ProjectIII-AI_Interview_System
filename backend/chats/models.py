@@ -42,6 +42,7 @@ class ChatSession(models.Model):
     average_behavioral_score = models.FloatField(null=True, blank=True)
     average_situational_score = models.FloatField(null=True, blank=True)
     average_technical_score = models.FloatField(null=True, blank=True)
+    previous_high_scores = models.JSONField(default=dict, blank=True)
 
     archived = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
