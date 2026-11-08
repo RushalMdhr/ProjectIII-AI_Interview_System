@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bot, LoaderCircle, Play, Send, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, LoaderCircle, Play, Send, UserRound, Sparkles } from "lucide-react";
 import {
   createChatSession,
+  generateInterviewAnswerSuggestion,
   prefetchInterviewQuestions,
   sendChatMessage,
   startChatInterview,
@@ -25,6 +26,7 @@ export default function Interview() {
   const [hasStarted, setHasStarted] = useState(false);
   const [isInterviewEnded, setIsInterviewEnded] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false); // NEW: Tracks Ollama request
   const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState(state?.sessionId || null);
 
@@ -79,6 +81,39 @@ export default function Interview() {
       );
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleGenerateSuggestion = async () => {
+    if (isGenerating || isSending) return;
+    if (!input.trim()) {
+      setError("Write a short draft first, then click the suggestion button.");
+      inputRef.current?.focus();
+      return;
+    }
+    if (!sessionId) {
+      setError("Start the interview before requesting a suggestion.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setError("");
+
+    try {
+      const response = await generateInterviewAnswerSuggestion(sessionId, input.trim());
+      if (!response.suggestion?.trim()) {
+        setError("The AI did not return a suggested answer. Please try again.");
+        return;
+      }
+      setInput(response.suggestion.trim());
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.error ||
+          "Could not generate a suggestion. Please check the AI provider and try again.",
+      );
+    } finally {
+      setIsGenerating(false);
+      inputRef.current?.focus();
     }
   };
 
@@ -344,6 +379,30 @@ export default function Interview() {
 
         .interview-input:focus { border-color: #45E0D0; }
 
+        /* NEW STYLE FOR SUGGEST BUTTON */
+        .interview-suggest {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 48px;
+          width: 48px;
+          border: 1px solid rgba(69,224,208,0.3);
+          border-radius: 12px;
+          background: rgba(69,224,208,0.1);
+          color: #45E0D0;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .interview-suggest:hover:not(:disabled) {
+          background: rgba(69,224,208,0.2);
+        }
+
+        .interview-suggest:disabled {
+          cursor: progress;
+          opacity: 0.5;
+        }
+
         .interview-send {
           display: inline-flex;
           align-items: center;
@@ -447,6 +506,18 @@ export default function Interview() {
         </main>
         {hasStarted && !isInterviewEnded && (
         <form className="interview-composer" onSubmit={handleSend}>
+          
+          <button 
+            type="button"
+            className="interview-suggest"
+            onClick={handleGenerateSuggestion}
+            disabled={isGenerating || isSending}
+            aria-label={isGenerating ? "Generating answer suggestion" : "Generate answer suggestion"}
+            title={isGenerating ? "Generating suggestion..." : "Improve draft with AI"}
+          >
+            {isGenerating ? <LoaderCircle size={18} className="interview-spin" /> : <Sparkles size={18} />}
+          </button>
+
           <textarea
             ref={inputRef}
             className="interview-input"
@@ -459,10 +530,10 @@ export default function Interview() {
                 event.currentTarget.form.requestSubmit();
               }
             }}
-            placeholder="Type your answer..."
-            disabled={isSending}
+            placeholder="Type a short draft, then click the sparkle..."
+            disabled={isSending || isGenerating}
           />
-          <button className="interview-send" type="submit" disabled={isSending || !input.trim()}>
+          <button className="interview-send" type="submit" disabled={isSending || isGenerating || !input.trim()}>
             <Send size={16} /><span className="interview-send-label">Send</span>
           </button>
         </form>
