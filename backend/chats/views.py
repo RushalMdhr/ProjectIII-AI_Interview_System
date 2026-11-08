@@ -2,6 +2,7 @@ import re
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -16,7 +17,7 @@ from ai_app.ai.utils.Evaluator import evaluate_candidate_answer
 from ai_app.ai.utils.chat_services import generate_response
 
 from .models import ChatSession, ChatMessage, InterviewFeedback
-from accounts.models import UserProfile
+from accounts.models import User, UserProfile
 from .serializers import (
     ChatSessionSerializer,
     ChatMessageSerializer,
@@ -63,23 +64,80 @@ def _create_question_attempt(session, question):
         asked_questions_id=None if not question.get("id") else question.get("id"),
         question_text=question["question"],
         candidate_answer="",
+        category=session.current_state.lower(),
         # question_number=session.question_count + 1,
         question_difficulty=question.get("difficulty", session.current_difficulty),
     )
 
 
-def _update_session_average_overall_score(session):
+def _update_session_scores(session):
+    categories = {
+        "introduction": [],
+        "experience": [],
+        "behavioral": [],
+        "situational": [],
+        "technical": [],
+    }
     scores = []
-    ratings = session.interview_feedbacks.values_list("rating", flat=True)
-    for rating in ratings:
+    ratings = session.interview_feedbacks.values_list(
+        "rating",
+        "category",
+        "asked_questions__categories",
+    )
+    for rating, category, question_categories in ratings:
         if not isinstance(rating, dict):
             continue
         score = rating.get("overall_score")
-        if isinstance(score, (int, float)):
+        if isinstance(score, (int, float)) and not isinstance(score, bool):
             scores.append(score)
+            if category not in categories:
+                category = next(
+                    (
+                        question_category.lower()
+                        for question_category in (question_categories or [])
+                        if question_category.lower() in categories
+                    ),
+                    None,
+                )
+            if category in categories:
+                categories[category].append(score)
 
     average = round(sum(scores) / len(scores), 2) if scores else None
+    session.average_overall_score = average
+    for category, category_scores in categories.items():
+        setattr(
+            session,
+            f"average_{category}_score",
+            round(sum(category_scores) / len(category_scores), 2)
+            if category_scores else None,
+        )
+    session.save(update_fields=[
+        "average_overall_score",
+        "average_introduction_score",
+        "average_experience_score",
+        "average_behavioral_score",
+        "average_situational_score",
+        "average_technical_score",
+        "updated_at",
+    ])
     session.interview_feedbacks.update(average_overall_score=average)
+
+    if session.halted:
+        highest_scores = {
+            "highest_score": session.average_overall_score,
+            "highest_introduction_score": session.average_introduction_score,
+            "highest_experience_score": session.average_experience_score,
+            "highest_behavioral_score": session.average_behavioral_score,
+            "highest_situational_score": session.average_situational_score,
+            "highest_technical_score": session.average_technical_score,
+        }
+        for field, score in highest_scores.items():
+            if score is not None:
+                User.objects.filter(pk=session.user_id).filter(
+                    Q(**{f"{field}__isnull": True})
+                    | Q(**{f"{field}__lt": score})
+                ).update(**{field: score})
+
     return average
 
 
@@ -465,10 +523,11 @@ def _send_interview_answer(request, session, user_content):
             asked_questions=None,
             question_text=repeated_question_text,
             candidate_answer="",
+            category=attempt.category,
             question_difficulty=attempt.question_difficulty or session.current_difficulty,
             feedback=REPEAT_PENDING_FEEDBACK,
         )
-        average_score = _update_session_average_overall_score(session)
+        average_score = _update_session_scores(session)
         attempt.average_overall_score = average_score
         repeated_attempt.average_overall_score = average_score
         return Response(
@@ -505,7 +564,7 @@ def _send_interview_answer(request, session, user_content):
         "archived",
         "updated_at",
     ])
-    average_score = _update_session_average_overall_score(session)
+    average_score = _update_session_scores(session)
     attempt.average_overall_score = average_score
     if next_attempt:
         next_attempt.average_overall_score = average_score

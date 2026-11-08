@@ -497,6 +497,12 @@ def get_profile(request):
             'last_name': request.user.last_name,
             'profile_picture': profile_picture,
             'profile_picture_url': request.user.profile_picture_url,
+            'highest_score': request.user.highest_score,
+            'highest_introduction_score': request.user.highest_introduction_score,
+            'highest_experience_score': request.user.highest_experience_score,
+            'highest_behavioral_score': request.user.highest_behavioral_score,
+            'highest_situational_score': request.user.highest_situational_score,
+            'highest_technical_score': request.user.highest_technical_score,
         },
 
         'profile': {
@@ -648,6 +654,12 @@ def update_profile(request):
             'last_name': user.last_name,
             'profile_picture': profile_picture,
             'profile_picture_url': request.user.profile_picture_url,
+            'highest_score': user.highest_score,
+            'highest_introduction_score': user.highest_introduction_score,
+            'highest_experience_score': user.highest_experience_score,
+            'highest_behavioral_score': user.highest_behavioral_score,
+            'highest_situational_score': user.highest_situational_score,
+            'highest_technical_score': user.highest_technical_score,
         },
 
         'profile': {
