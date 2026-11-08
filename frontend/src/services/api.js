@@ -205,6 +205,21 @@ export async function prefetchInterviewQuestions(sessionId) {
   return res.data;
 }
 
+export async function generateInterviewAnswerSuggestion(sessionId, draft) {
+  const res = await client.post(
+    `/chats/session/${sessionId}/suggest-answer/`,
+    { draft },
+  );
+  return res.data;
+}
+
+export async function getInterviewResults(sessionId, includeReview = false) {
+  const res = await client.get(`/chats/session/${sessionId}/results/`, {
+    params: includeReview ? { include: "review" } : undefined,
+  });
+  return res.data;
+}
+
 
 export async function getChatMessages(sessionId) {
   const res = await client.get(

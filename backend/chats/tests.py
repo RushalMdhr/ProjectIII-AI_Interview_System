@@ -278,3 +278,23 @@ class InterviewFlowTests(TestCase):
 		self.assertEqual(self.user.highest_score, 7)
 		self.assertEqual(self.user.highest_introduction_score, 8)
 		self.assertEqual(self.user.highest_behavioral_score, 6)
+		results_url = reverse(
+			"interview_results",
+			kwargs={"session_id": self.session.id},
+		)
+		summary_response = self.client.get(results_url)
+		self.assertEqual(summary_response.status_code, 200)
+		self.assertNotIn("questions", summary_response.data)
+		results_response = self.client.get(
+			results_url,
+			{"include": "review"},
+		)
+		self.assertEqual(results_response.status_code, 200)
+		self.assertIsNone(
+			results_response.data["previous_high_scores"]["highest_score"]
+		)
+		self.assertEqual(len(results_response.data["questions"]), 2)
+		self.assertEqual(
+			results_response.data["questions"][0]["candidate_answer"],
+			"I would clarify the issue and find a solution.",
+		)
