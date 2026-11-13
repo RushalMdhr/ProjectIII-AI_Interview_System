@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function OAuthCallback() {
   const navigate = useNavigate();
@@ -11,7 +12,9 @@ function OAuthCallback() {
     const user = callbackParams.get("user");
 
     if (!accessToken || !refreshToken || !user) {
-      navigate("/", { replace: true });
+      const msg = "Google sign-in was interrupted. Please try again.";
+      toast.error(msg);
+      navigate("/login", { replace: true });
       return;
     }
 
@@ -19,8 +22,14 @@ function OAuthCallback() {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("currentUser", user);
+
+      const parsedUser = JSON.parse(user);
+      const displayName = parsedUser?.first_name || parsedUser?.name || "there";
+      toast.success(`Welcome back, ${displayName}!`);
       navigate("/", { replace: true });
     } catch {
+      const msg = "Google sign-in failed. Please try again.";
+      toast.error(msg);
       navigate("/login", { replace: true });
     }
   }, [navigate]);
