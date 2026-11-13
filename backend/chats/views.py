@@ -599,7 +599,8 @@ def sessions(request):
     if request.method == 'GET':
         sessions = ChatSession.objects.filter(
             user=request.user,
-            archived=False
+            archived=False,
+            use_case="general_chat",
         ).order_by('-updated_at')
 
         serializer = ChatSessionSerializer(
