@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-toastify";
 
 // =====================================================
 // AXIOS CLIENT
@@ -60,7 +61,7 @@ client.interceptors.response.use(
     const refreshToken = localStorage.getItem("refreshToken");
 
     if (!refreshToken) {
-      logout();
+      logout("Your session expired. Please log in again.");
       window.location.assign("/login");
       return Promise.reject(error);
     }
@@ -84,7 +85,7 @@ client.interceptors.response.use(
 
       return client(originalRequest);
     } catch (refreshError) {
-      logout();
+      logout("Your session expired. Please log in again.");
       window.location.assign("/login");
 
       return Promise.reject(refreshError);
@@ -202,6 +203,21 @@ export async function startChatInterview(sessionId) {
 
 export async function prefetchInterviewQuestions(sessionId) {
   const res = await client.post(`/chats/session/${sessionId}/prefetch-questions/`);
+  return res.data;
+}
+
+export async function generateInterviewAnswerSuggestion(sessionId, draft) {
+  const res = await client.post(
+    `/chats/session/${sessionId}/suggest-answer/`,
+    { draft },
+  );
+  return res.data;
+}
+
+export async function getInterviewResults(sessionId, includeReview = false) {
+  const res = await client.get(`/chats/session/${sessionId}/results/`, {
+    params: includeReview ? { include: "review" } : undefined,
+  });
   return res.data;
 }
 
@@ -324,11 +340,15 @@ export async function getCurrentUser() {
 // LOGOUT
 // =====================================================
 
-export function logout() {
-
+export function logout(message = "Logged out successfully.") {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("currentUser");
+
+  toast.info(message, {
+    toastId: "logout-toast",
+    position: "top-right",
+  });
 }
 
 

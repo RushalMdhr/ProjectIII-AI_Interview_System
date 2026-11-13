@@ -701,109 +701,31 @@ const UserProfile = () => {
 const RoleOptions = () => {
   return (
     <>
-      <option value="Network Engineer">Network Engineer</option>
+      <option value="BizOps & Strategy">BizOps & Strategy</option>
 
-      <option value="Engineering Manager">Engineering Manager</option>
+<option value="common">common</option>
 
-      <option value="Penetration Tester / Ethical Hacker">
-        Penetration Tester / Ethical Hacker
-      </option>
+<option value="Data Analyst">Data Analyst</option>
 
-      <option value="Scrum Master / Agile Coach">
-        Scrum Master / Agile Coach
-      </option>
+<option value="Data Engineer">Data Engineer</option>
 
-      <option value="Solutions Architect">Solutions Architect</option>
+<option value="Data Scientist">Data Scientist</option>
 
-      <option value="Platform Engineer">Platform Engineer</option>
+<option value="Engineering Manager">Engineering Manager</option>
 
-      <option value="Database Administrator (DBA)">
-        Database Administrator (DBA)
-      </option>
+<option value="Investment Banking">Investment Banking</option>
 
-      <option value="Blockchain / Smart Contract Developer">
-        Blockchain / Smart Contract Developer
-      </option>
+<option value="Machine Learning Engineer">
+  Machine Learning Engineer
+</option>
 
-      <option value="MLOps Engineer">MLOps Engineer</option>
+<option value="Product Manager">Product Manager</option>
 
-      <option value="Computer Vision Engineer">Computer Vision Engineer</option>
+<option value="Software Engineer">Software Engineer</option>
 
-      <option value="Game Developer">Game Developer</option>
-
-      <option value="Data Scientist">Data Scientist</option>
-
-      <option value="Sales / Solutions Engineer">
-        Sales / Solutions Engineer
-      </option>
-
-      <option value="Technical Product Manager">
-        Technical Product Manager
-      </option>
-
-      <option value="Security Operations (SOC) Analyst">
-        Security Operations (SOC) Analyst
-      </option>
-
-      <option value="UX/UI Designer">UX/UI Designer</option>
-
-      <option value="Business Intelligence (BI) Analyst">
-        Business Intelligence (BI) Analyst
-      </option>
-
-      <option value="Data Engineer">Data Engineer</option>
-
-      <option value="NLP Engineer">NLP Engineer</option>
-
-      <option value="Test Automation Engineer">Test Automation Engineer</option>
-
-      <option value="Cloud Infrastructure Engineer">
-        Cloud Infrastructure Engineer
-      </option>
-
-      <option value="Fraud Analyst">Fraud Analyst</option>
-
-      <option value="Site Reliability Engineer (SRE)">
-        Site Reliability Engineer (SRE)
-      </option>
-
-      <option value="DevOps Engineer">DevOps Engineer</option>
-
-      <option value="Mobile App Developer (iOS/Android)">
-        Mobile App Developer (iOS/Android)
-      </option>
-
-      <option value="QA Engineer">QA Engineer</option>
-
-      <option value="Robotics Engineer">Robotics Engineer</option>
-
-      <option value="Frontend Developer">Frontend Developer</option>
-
-      <option value="Full Stack Developer">Full Stack Developer</option>
-
-      <option value="AI/ML Engineer">AI/ML Engineer</option>
-
-      <option value="Backend Developer">Backend Developer</option>
-
-      <option value="IoT Solutions Engineer">IoT Solutions Engineer</option>
-
-      <option value="Application Security (AppSec) Engineer">
-        Application Security (AppSec) Engineer
-      </option>
-
-      <option value="Data Analyst">Data Analyst</option>
-
-      <option value="Embedded Systems Developer">
-        Embedded Systems Developer
-      </option>
-
-      <option value="Systems Analyst">Systems Analyst</option>
-
-      <option value="QA Automation Engineer">QA Automation Engineer</option>
-
-      <option value="SDET (Software Development Engineer in Test)">
-        SDET (Software Development Engineer in Test)
-      </option>
+<option value="Technical Program Manager">
+  Technical Program Manager
+</option>
     </>
   );
 };

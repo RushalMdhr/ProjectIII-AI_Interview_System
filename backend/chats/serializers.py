@@ -5,6 +5,12 @@ from .models import ChatSession, ChatMessage, InterviewFeedback
 
 
 class InterviewFeedbackSerializer(serializers.ModelSerializer):
+    expected_answer = serializers.SerializerMethodField()
+
+    def get_expected_answer(self, instance):
+        if instance.asked_questions_id:
+            return instance.asked_questions.answer
+        return ''
 
     class Meta:
         model = InterviewFeedback
@@ -12,8 +18,11 @@ class InterviewFeedbackSerializer(serializers.ModelSerializer):
             'id',
             'session',
             'question_text',
+            'expected_answer',
             'candidate_answer',
+            'category',
             'rating',
+            'average_overall_score',
             'feedback',
             'question_difficulty',
             'created_at',
@@ -53,6 +62,12 @@ class ChatSessionSerializer(serializers.ModelSerializer):
             'question_count',
             'interview_role',
             'halted',
+            'average_overall_score',
+            'average_introduction_score',
+            'average_experience_score',
+            'average_behavioral_score',
+            'average_situational_score',
+            'average_technical_score',
             'created_at',
             'updated_at',
             'archived',
@@ -61,4 +76,10 @@ class ChatSessionSerializer(serializers.ModelSerializer):
             'id',
             'created_at',
             'updated_at',
+            'average_overall_score',
+            'average_introduction_score',
+            'average_experience_score',
+            'average_behavioral_score',
+            'average_situational_score',
+            'average_technical_score',
         ]
