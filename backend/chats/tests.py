@@ -26,6 +26,19 @@ class InterviewFlowTests(TestCase):
 		self.client = APIClient()
 		self.client.force_authenticate(user=self.user)
 
+	def test_session_list_excludes_interview_sessions(self):
+		ChatSession.objects.create(
+			user=self.user,
+			title="General chat",
+			use_case="general_chat",
+		)
+
+		response = self.client.get(reverse("sessions"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(len(response.data), 1)
+		self.assertEqual(response.data[0]["use_case"], "general_chat")
+
 	@patch(
 		"chats.views.get_question_for_state",
 		return_value={
