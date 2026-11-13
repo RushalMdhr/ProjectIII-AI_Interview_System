@@ -12,9 +12,8 @@ function OAuthCallback() {
     const user = callbackParams.get("user");
 
     if (!accessToken || !refreshToken || !user) {
-      const msg = "Google sign-in was interrupted. Please try again.";
-      toast.error(msg);
-      navigate("/login", { replace: true });
+     toast.success("Signed in successfully.");
+      navigate("/", { replace: true });
       return;
     }
 
@@ -22,14 +21,10 @@ function OAuthCallback() {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("currentUser", user);
-
-      const parsedUser = JSON.parse(user);
-      const displayName = parsedUser?.first_name || parsedUser?.name || "there";
-      toast.success(`Welcome back, ${displayName}!`);
+      toast.success("Signed in successfully.");
       navigate("/", { replace: true });
     } catch {
-      const msg = "Google sign-in failed. Please try again.";
-      toast.error(msg);
+      toast.error("Unable to complete sign-in. Please try again.");
       navigate("/login", { replace: true });
     }
   }, [navigate]);
