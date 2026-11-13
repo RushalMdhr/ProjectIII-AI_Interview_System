@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-toastify";
 
 // =====================================================
 // AXIOS CLIENT
@@ -60,7 +61,7 @@ client.interceptors.response.use(
     const refreshToken = localStorage.getItem("refreshToken");
 
     if (!refreshToken) {
-      logout();
+      logout("Your session expired. Please log in again.");
       window.location.assign("/login");
       return Promise.reject(error);
     }
@@ -84,7 +85,7 @@ client.interceptors.response.use(
 
       return client(originalRequest);
     } catch (refreshError) {
-      logout();
+      logout("Your session expired. Please log in again.");
       window.location.assign("/login");
 
       return Promise.reject(refreshError);
@@ -339,11 +340,15 @@ export async function getCurrentUser() {
 // LOGOUT
 // =====================================================
 
-export function logout() {
-
+export function logout(message = "Logged out successfully.") {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("currentUser");
+
+  toast.info(message, {
+    toastId: "logout-toast",
+    position: "top-right",
+  });
 }
 
 

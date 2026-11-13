@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Sparkles } from "lucide-react";
+import { toast } from "react-toastify";
 import { login, register } from "../services/api";
 import HomeBackground from "../components/HomeBackground";
 
@@ -233,14 +234,18 @@ function Register() {
       console.log("Register response:", res);
 
       if (!res.success) {
-        setError(res.message);
+        const msg = res.message || "Couldn't create your account.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
       const auth = await login(form.email, form.password);
 
       if (!auth.success || !auth.access || !auth.refresh) {
-        setError("Account created, but automatic login failed. Please log in.");
+        const msg = "Account created, but automatic login failed. Please log in.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
@@ -248,7 +253,9 @@ function Register() {
       localStorage.setItem("refreshToken", auth.refresh);
       localStorage.setItem("currentUser", JSON.stringify(auth.user));
 
-      setSuccess(res.message);
+      const successMessage = res.message || "Account created successfully.";
+      setSuccess(successMessage);
+      toast.success(`Welcome aboard${auth.user?.first_name ? `, ${auth.user.first_name}` : ""}! Your account has been created successfully.`);
 
       setTimeout(() => {
         navigate("/");
@@ -257,11 +264,13 @@ function Register() {
     } catch (err) {
       console.error("Registration error:", err);
 
-      setError(
+      const msg =
         err.response?.data?.detail ||
         err.response?.data?.message ||
-        "Couldn't create your account. Try again."
-      );
+        "Couldn't create your account. Try again.";
+
+      setError(msg);
+      toast.error(msg);
 
     } finally {
       setLoading(false);
