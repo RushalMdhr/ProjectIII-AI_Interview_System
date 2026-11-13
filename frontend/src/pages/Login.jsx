@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Sparkles } from "lucide-react";
 import { login, requestPasswordReset } from "../services/api";
 import HomeBackground from "../components/HomeBackground";
+import { toast } from "react-toastify";
 
 /* =========================================
    TOKENS — same palette as HomePage
@@ -242,7 +243,9 @@ function Login() {
       console.log("Login response:", res);
 
       if (!res.success) {
-        setError(res.message || "Invalid email or password.");
+        const msg = res.message || "Invalid email or password.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
@@ -257,6 +260,7 @@ function Login() {
       }
 
       localStorage.setItem("currentUser", JSON.stringify(res.user));
+      toast.success(`Welcome back${res.user?.first_name ? `, ${res.user.first_name}` : ""}!`);
 
       navigate(
         res.user?.is_superuser
@@ -267,12 +271,13 @@ function Login() {
     } catch (err) {
       console.error("Login error:", err);
 
-      if (err.response?.data?.detail || err.response?.data?.message) {
-        setError(err.response.data.detail || err.response.data.message);
-      } else {
-        setError("Couldn't log in. Check your email and password.");
-      }
+      const msg =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        "Couldn't log in. Check your email and password.";
 
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -286,12 +291,15 @@ function Login() {
 
     try {
       const response = await requestPasswordReset(form.email);
-      setResetMessage(response.message);
+      const msg = response.message || "Password reset link sent successfully.";
+      setResetMessage(msg);
+      toast.success(msg);
     } catch (err) {
-      setError(
+      const msg =
         err.response?.data?.message ||
-          "Could not send the reset email. Please try again.",
-      );
+        "Could not send the reset email. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
