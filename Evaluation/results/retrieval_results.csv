@@ -1,0 +1,41 @@
+query,precision@5,recall@5,mrr,f1,average_similarity
+What kind of growth opportunities are you looking for?,0.2,1.0,1.0,0.33333333333333337,0.47566135582630426
+What makes a good leader in your opinion?,0.2,1.0,1.0,0.33333333333333337,0.5301776618375653
+What's the most significant change you've had to adapt to at work?,0.2,1.0,1.0,0.33333333333333337,0.41588770166200195
+Do you prefer working independently or in teams? Why?,0.2,1.0,1.0,0.33333333333333337,0.5091453940066593
+How do you build trust with new teammates?,0.2,1.0,1.0,0.33333333333333337,0.6145250777072985
+What role do you usually play in group settings?,0.2,1.0,1.0,0.33333333333333337,0.5346392819997585
+Describe a time you failed and what you learned from it.,0.2,1.0,1.0,0.33333333333333337,0.5807587471101123
+Describe a time you handled a difficult situation professionally.,0.2,1.0,1.0,0.33333333333333337,0.5974464115606851
+How do you respond when a teammate isn't pulling their weight?,0.2,1.0,1.0,0.33333333333333337,0.5400058556580296
+Tell me about a conflict you had with a coworker and how you resolved it.,0.2,1.0,1.0,0.33333333333333337,0.5688650939211949
+How do you stay motivated during repetitive tasks?,0.2,1.0,1.0,0.33333333333333337,0.6062888814186891
+How do you stay updated with industry trends?,0.2,1.0,1.0,0.33333333333333337,0.6212121781139756
+How do you motivate others in a leadership role?,0.2,1.0,1.0,0.33333333333333337,0.5732123332973789
+What drives your passion for this field?,0.2,1.0,1.0,0.33333333333333337,0.4935492739005175
+How do you handle disagreements within a team?,0.2,1.0,1.0,0.33333333333333337,0.5968362705064834
+Where do you see yourself in 5 years?,0.2,1.0,1.0,0.33333333333333337,0.553921568627451
+What tools or methods help you stay organized?,0.2,1.0,1.0,0.33333333333333337,0.4725833543576374
+How do you delegate tasks effectively?,0.2,1.0,1.0,0.33333333333333337,0.5990805576852088
+How do you align with our company values?,0.2,1.0,1.0,0.33333333333333337,0.6220346899721598
+What type of company culture do you thrive in?,0.2,1.0,1.0,0.33333333333333337,0.5026946056307758
+How do you deal with feedback that you disagree with?,0.2,1.0,1.0,0.33333333333333337,0.5798730496022703
+How do you react to sudden changes in priorities?,0.2,1.0,1.0,0.33333333333333337,0.5694532339831921
+How do you contribute to a positive team environment?,0.2,1.0,1.0,0.33333333333333337,0.5793640131276555
+Describe a project where teamwork was essential to success.,0.2,1.0,1.0,0.33333333333333337,0.47588991041961337
+Tell me about a time you mentored someone.,0.2,1.0,1.0,0.33333333333333337,0.7357901144426466
+What would you do if you disagreed with your manager?,0.2,1.0,1.0,0.33333333333333337,0.551958230917854
+Describe a time you felt out of place in a workplace culture.,0.2,1.0,1.0,0.33333333333333337,0.5403170723559073
+How does this role fit into your career path?,0.2,1.0,1.0,0.33333333333333337,0.4524607491987299
+Why do you want to work at our company?,0.2,1.0,1.0,0.33333333333333337,0.5463961038961039
+Describe your ideal workday.,0.2,1.0,1.0,0.33333333333333337,0.48516311290110775
+Tell me about a time you were highly motivated to achieve a goal.,0.2,1.0,1.0,0.33333333333333337,0.6386381232143686
+What are your long-term career aspirations?,0.2,1.0,1.0,0.33333333333333337,0.5379835358751022
+What are your expectations from leadership in a company?,0.2,1.0,1.0,0.33333333333333337,0.5353293041437371
+How do you organize and prioritize your daily tasks?,0.2,1.0,1.0,0.33333333333333337,0.5701113678730302
+How do you ensure productivity when working remotely?,0.2,1.0,1.0,0.33333333333333337,0.5791669203218577
+Tell me about a time you worked well within a team.,0.2,1.0,1.0,0.33333333333333337,0.6873557747831531
+What motivates you to come to work every day?,0.2,1.0,1.0,0.33333333333333337,0.5199764521193092
+Tell me about a time you had to learn something completely new quickly.,0.2,1.0,1.0,0.33333333333333337,0.6283304192571693
+Describe a time you led a project or team.,0.2,1.0,1.0,0.33333333333333337,0.6347138107696606
+What skills do you hope to develop in your next role?,0.2,1.0,1.0,0.33333333333333337,0.5482010354198572

@@ -1,0 +1,63 @@
+question,ideal_answer,generated_answer,exact_match,token_f1,bleu,rouge1,rouge2,rougeL
+What kind of growth opportunities are you looking for?,My long-term goal is to grow into a senior role where I can contribute more strategically and mentor others. This role brings me closer to that. What kind of growth opportunities are you looking for?,"I'm excited about the opportunity to grow and develop my skills within this role. I'm looking for opportunities that will allow me to expand my technical expertise, take on new challenges, and contribute meaningfully to the company's success.
+
+Specifically, I'd like to explore opportunities such as:
+
+* Learning new technologies and frameworks to stay up-to-date with industry trends
+* Taking on more complex projects or leading a team of engineers to drive innovation
+* Developing my leadership skills through mentorship or management roles
+* Collaborating with cross-functional teams to drive business growth and improve processes
+* Staying engaged in professional development opportunities, such as training programs, conferences, or online courses
+
+Ultimately, I'm looking for opportunities that will allow me to grow both personally and professionally, while making a meaningful impact on the company's success.",0,0.16568047337278108,0.004616699340934282,0.21839080459770113,0.03488372093023256,0.13793103448275862
+What makes a good leader in your opinion?,"I lead by example and encourage open communication and accountability. One time, I led a team through X and we achieved Y. What makes a good leader in your opinion?","In my opinion, a good leader possesses a combination of key qualities that enable them to inspire, motivate, and guide their team towards achieving common goals. Some of the most important characteristics of a good leader include:
+
+1. **Strong Communication Skills**: The ability to clearly articulate vision, values, and expectations is crucial for effective leadership.
+2. **Emotional Intelligence**: Self-awareness, empathy, and social skills are essential for building strong relationships with team members and stakeholders.
+3. **Strategic Thinking**: A good leader can think critically and make informed decisions that align with the organization's goals and objectives.
+4. **Adaptability and Flexibility**: The ability to adapt to changing circumstances and navigate uncertainty is vital in today's fast-paced business environment.
+5. **Empowerment and Trust**: Leaders who empower their team members, provide autonomy, and demonstrate trust are more likely to foster a culture of innovation and growth.
+6. **Accountability and Integrity**: A good leader takes ownership of their actions, is transparent, and demonstrates a strong sense of ethics and values.
+7. **Coaching and Development**: The ability to develop and grow team members is essential for creating a high-performing organization.
+8. **Collaboration and Teamwork**: Effective leaders know how to build and maintain strong relationships with colleagues, partners, and stakeholders.
+
+Ultimately, a good leader is one who can inspire and motivate their team to achieve greatness while also being accountable, adaptable, and committed to the organization's mission and values.",0,0.08396946564885496,0.005283720662101619,0.11194029850746269,0.015037593984962407,0.0746268656716418
+What's the most significant change you've had to adapt to at work?,"I'm always eager to learn and embrace change as a way to improve. For example, I once had to switch to a new tech stack and picked it up quickly. What's the most significant change you've had to adapt to at work?","In my previous role, I had to adapt to a significant shift in technology that impacted our workflow. The company implemented a new project management tool, which required us to retrain on its features and functionality.
+
+Initially, it was challenging to adjust to the new system, as it differed from what we were used to. However, with the support of my team and the training provided by our IT department, I was able to quickly grasp the new tool's capabilities and benefits.
+
+The most significant change I had to adapt to was not only learning the new technology but also changing my workflow and communication patterns. I had to adjust how I organized tasks, collaborated with colleagues, and reported progress to management.
+
+Through this experience, I developed valuable skills such as:
+
+1. Adaptability: I learned to be flexible and open to change, which is essential in today's fast-paced work environment.
+2. Resilience: I overcame the initial resistance to the new tool and adjusted to its benefits, demonstrating my ability to bounce back from challenges.
+3. Continuous learning: The experience reinforced the importance of staying up-to-date with industry trends and technological advancements.
+
+Overall, adapting to this change not only improved our team's efficiency but also helped me grow professionally as a result of developing these essential skills.",0,0.1705426356589147,0.03019651127022835,0.2247191011235955,0.07547169811320756,0.14981273408239698
+Do you prefer working independently or in teams? Why?,I follow a structured workflow and use tools like Jira/Trello/Notion to manage my tasks efficiently. Do you prefer working independently or in teams? Why?,"I'm comfortable with both options, as it ultimately depends on the specific task and project requirements.
+
+When working independently, I enjoy the autonomy to focus on a single task, make decisions quickly, and work at my own pace. This allows me to be highly productive and deliver high-quality results without needing constant input or validation from others. Additionally, independent work enables me to learn and develop new skills more efficiently, as I can experiment and try different approaches without being constrained by the opinions of others.
+
+On the other hand, working in teams provides opportunities for collaboration, knowledge sharing, and diverse perspectives. When working with a team, I appreciate the ability to bounce ideas off colleagues, receive feedback, and learn from their expertise. Teamwork also fosters a sense of camaraderie and shared accountability, which can lead to more innovative solutions and better outcomes.
+
+In general, I believe that both independent work and teamwork are essential skills for any professional. By being adaptable and able to switch between these modes, I can effectively contribute to projects and deliver results in various contexts.",0,0.07804878048780488,0.0016661590961679585,0.11483253588516748,0.019323671497584544,0.07655502392344497
+How do you build trust with new teammates?,"I believe communication and mutual respect are key to successful collaboration. In one project, we achieved X because of great teamwork. How do you build trust with new teammates?","Building trust with new teammates is crucial for effective collaboration and team success. Here's how I approach it:
+
+1. **Active Listening**: When working on a project or task, I make sure to actively listen to my teammates' ideas, concerns, and perspectives. This helps me understand their thought process and shows that I value their input.
+
+2. **Clear Communication**: I communicate clearly and transparently about my intentions, goals, and expectations. This helps set clear boundaries and avoids misunderstandings.
+
+3. **Follow-Through on Commitments**: I prioritize tasks and follow through on commitments to demonstrate reliability and accountability. This builds trust by showing that I can be counted on to deliver results.
+
+4. **Be Approachable and Open-Minded**: I strive to be approachable, open-minded, and non-judgmental. By creating a safe space for discussion and feedback, I encourage my teammates to share their thoughts and ideas without fear of criticism.
+
+5. **Show Appreciation and Gratitude**: I express gratitude and appreciation for my teammates' contributions, no matter how small they may seem. This helps build positive relationships and reinforces the idea that everyone's input is valued.
+
+6. **Be Proactive and Supportive**: When needed, I offer support and guidance to help my teammates overcome challenges or achieve their goals. By being proactive and supportive, I demonstrate a commitment to our team's success.
+
+7. **Emphasize Team Goals Over Individual Achievements**: I prioritize the team's objectives over individual accomplishments, recognizing that our collective success is more important than personal recognition.
+
+8. **Be Adaptable and Flexible**: I'm willing to adapt to changing circumstances and adjust my approach as needed. This demonstrates a willingness to learn from others and work together towards common goals.
+
+By following these steps, I've found that building trust with new teammates takes time and effort but ultimately leads to stronger, more effective relationships and improved team outcomes.",0,0.0547112462006079,0.003880403049079543,0.08849557522123894,0.023738872403560828,0.0648967551622419

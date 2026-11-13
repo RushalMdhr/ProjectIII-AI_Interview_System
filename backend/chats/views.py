@@ -1,5 +1,6 @@
 import re
 
+from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,11 +10,12 @@ from ai_app.ai.utils.embeddings import embed_text
 from ai_app.ai.utils.message import assistant_talking, user_talking
 from ai_app.ai.utils.chats_handler import (
     chats_handler,
-    evaluate_interview_answer_llm,
+    evaluate_interview_answer,
     generate_chat_title,
     generate_interview_intro,
 )
 from ai_app.ai.utils.Evaluator import evaluate_candidate_answer
+from ai_app.ai.llm import ai
 
 from .models import ChatSession, ChatMessage, InterviewFeedback
 from accounts.models import UserProfile
@@ -774,3 +776,44 @@ def delete_session(request, session_id):
         },
         status=status.HTTP_200_OK
     )
+
+@api_view(['POST'])
+def evaluation_generate(request):
+    try:
+        question = request.data.get("query", "").strip()
+
+        if not question:
+            return JsonResponse({
+                "success": False,
+                "error": "Question is required."
+            }, status=400)
+
+        msg = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a technical interview preparation assistant. "
+                    "Answer the interview question accurately, clearly, "
+                    "and professionally. Provide a concise but complete answer."
+                )
+            },
+            {
+                "role": "user",
+                "content": question
+            }
+        ]
+
+        answer = ai(msg=msg, temperature=0.1)
+
+        return JsonResponse({
+            "success": True,
+            "query": question,
+            "answer": answer,
+            "model": "llama3.2:latest"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)

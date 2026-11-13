@@ -10,10 +10,29 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name='interviewfeedback',
-            name='feedback',
-            field=models.TextField(blank=True, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        'ALTER TABLE "chats_interviewfeedback" '
+                        'ALTER COLUMN "feedback" TYPE text '
+                        'USING CASE WHEN "feedback" IS NULL THEN NULL '
+                        'ELSE "feedback" #>> \'{}\' END'
+                    ),
+                    reverse_sql=(
+                        'ALTER TABLE "chats_interviewfeedback" '
+                        'ALTER COLUMN "feedback" TYPE jsonb '
+                        'USING to_jsonb("feedback")'
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AlterField(
+                    model_name='interviewfeedback',
+                    name='feedback',
+                    field=models.TextField(blank=True, null=True),
+                ),
+            ],
         ),
         migrations.SeparateDatabaseAndState(
             database_operations=[

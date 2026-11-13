@@ -151,33 +151,20 @@ export default function Navbar() {
           >
             Hi, {displayName}
           </span>
-        </button>
 
-        <button
-          type="button"
-          aria-label="Open profile"
-          onClick={() => navigate(localStorage.getItem("accessToken") ? "/profile" : "/login")}
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${tokens.gold}, ${tokens.teal})`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#191C36",
-            overflow: "hidden",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
-          }}
-        >
           <span
             style={{
-              width: "100%",
-              height: "100%",
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg, ${tokens.gold}, ${tokens.teal})`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#191C36",
+              overflow: "hidden",
             }}
           >
             {profilePicture ? (
@@ -240,23 +227,6 @@ export default function Navbar() {
                 >
                   Profile
                 </Link>
-
-                {currentUser.is_superuser && (
-                  <Link
-                    to="/admin/dashboard"
-                    role="menuitem"
-                    onClick={() => setAccountMenuOpen(false)}
-                    style={{
-                      display: "block",
-                      padding: "10px 12px",
-                      color: tokens.teal,
-                      textDecoration: "none",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Analytics dashboard
-                  </Link>
-                )}
 
                 <button
                   type="button"

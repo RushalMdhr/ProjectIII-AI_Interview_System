@@ -1,0 +1,64 @@
+question,ideal_answer,generated_answer,exact_match,token_f1,bleu,rouge1,rouge2,rougeL
+Describe a time you handled a difficult situation professionally.,"I try to stay calm, understand the facts, and listen to everyone involved before responding. In a difficult project situation, I would clarify the main problem, discuss possible solutions respectfully, and agree on practical next steps with the people concerned. I would then follow up to make sure the issue was resolved. I believe professionalism means focusing on the solution rather than blaming someone.","I'd like to share an experience where I successfully navigated a challenging situation in a professional setting.
+
+In my previous role as a software engineer, I was working on a high-priority project with a tight deadline. One of my team members, who was responsible for implementing a critical feature, encountered an unexpected technical issue that caused the entire system to crash.
+
+The team member was under pressure to resolve the issue quickly, and their frustration was palpable. However, instead of taking it out on me or the rest of the team, they approached me with a clear explanation of the problem and asked for my help in finding a solution.
+
+I listened attentively to their concerns and empathized with their situation. I then worked collaboratively with them to identify potential causes and brainstorm possible solutions. We discussed the technical implications of each option and decided on a course of action that would minimize downtime and ensure the feature's functionality.
+
+Throughout the process, I maintained open communication with the team, keeping everyone informed about our progress and any changes we made. I also ensured that the team member felt supported and empowered to take ownership of their work.
+
+After several hours of intense collaboration, we successfully resolved the issue, and the system was back online. The team member's confidence and morale were restored, and they expressed gratitude for my support and guidance.
+
+This experience taught me the importance of staying calm under pressure, active listening, and effective communication in resolving difficult situations professionally. By handling the situation with empathy and a solution-focused mindset, I was able to turn a challenging moment into an opportunity for growth and learning.",0,0.15835777126099707,0.0034435249005923315,0.22543352601156072,0.03488372093023256,0.13294797687861273
+How does this role fit into your career path?,"This role fits my career path because it would let me apply the skills I have already developed while learning from real projects and experienced colleagues. I am looking for a position where I can build deeper expertise, contribute to the team's goals, and gradually take on more responsibility. The experience would support my longer-term growth in this field.","This role aligns with my long-term career goals by providing an opportunity to leverage my skills and experience in [specific area of expertise]. As I continue to grow professionally, I'm excited about the prospect of contributing to a team that shares my passion for [industry/field].
+
+In my current role at [current company], I've gained valuable experience in [key skills or accomplishments]. This new position would allow me to expand my skill set and take on more responsibilities, which is essential for my career growth.
+
+I'm particularly drawn to this organization because of its [reputation, mission, or values that resonate with you]. As a professional, I believe it's essential to work for an employer that aligns with my personal and professional goals. This role would not only provide me with new challenges but also offer opportunities for growth and development.
+
+Ultimately, I'm excited about the prospect of joining a team that shares my enthusiasm for [industry/field] and contributing to the company's success while continuing to learn and grow as a professional.",0,0.25327510917030566,0.011581149178001236,0.3416666666666667,0.058823529411764705,0.16666666666666666
+How do you handle disagreements within a team?,"I handle team disagreements by listening to each viewpoint and identifying the issue we need to solve. I encourage the discussion to stay respectful and focused on evidence, requirements, and the shared objective. Once a decision is made, I support the agreed approach and help the team move forward.","When handling disagreements within a team, I follow a structured approach to resolve conflicts in a constructive and respectful manner. Here's my step-by-step process:
+
+1. **Stay calm and objective**: As the disagreement arises, I take a moment to collect my thoughts, remain composed, and focus on finding a solution rather than taking sides.
+2. **Listen actively**: I make an effort to truly listen to each team member's perspective, asking clarifying questions to ensure I understand their concerns and needs.
+3. **Acknowledge emotions**: I acknowledge the emotions behind each person's opinion, showing empathy and understanding that can help diffuse tension.
+4. **Focus on the issue, not the person**: I steer the conversation back to the specific issue at hand, avoiding personal attacks or criticisms.
+5. **Seek common ground**: I look for areas of agreement and try to find a mutually beneficial solution that addresses everyone's concerns.
+6. **Encourage open communication**: I create an environment where team members feel comfortable sharing their thoughts and opinions, fostering an open and transparent dialogue.
+7. **Collaborate on solutions**: Together, we brainstorm potential solutions and evaluate the pros and cons of each option.
+8. **Make a decision**: Once we've identified a viable solution, we make a collective decision that works for everyone involved.
+9. **Document the outcome**: After the disagreement is resolved, I ensure that all team members are informed of the agreed-upon solution and any necessary next steps.
+
+By following this structured approach, I'm able to manage disagreements in a way that promotes collaboration, respect, and effective problem-solving within the team.",0,0.19672131147540986,0.002908015505158173,0.25396825396825395,0.04472843450479234,0.17142857142857143
+How do you delegate tasks effectively?,"I delegate by considering each person's skills, workload, and development goals. I explain the expected outcome, deadline, and any important constraints, while allowing the person to choose an appropriate way to complete the task. I remain available for questions and check progress at agreed points rather than micromanaging.","To delegate tasks effectively, I follow a structured approach that ensures clear communication, defined responsibilities, and measurable outcomes. Here's my step-by-step process:
+
+1. **Clearly define the task**: I clearly articulate the task requirements, expectations, and deadlines to ensure everyone involved understands what needs to be accomplished.
+2. **Assess the team member's capabilities**: I evaluate the skills, expertise, and workload of the team member who will be responsible for completing the task to determine their ability to deliver high-quality results.
+3. **Set specific goals and objectives**: I establish measurable goals and objectives for the task, including key performance indicators (KPIs) that will help track progress and success.
+4. **Provide necessary resources and support**: I ensure that the team member has access to the required tools, training, and guidance to complete the task successfully.
+5. **Establish a clear communication plan**: I define how often we'll meet to discuss progress, address concerns, and provide feedback to ensure open and transparent communication throughout the process.
+6. **Define accountability and ownership**: I clearly outline who is accountable for the task's outcome and what happens if deadlines are missed or goals aren't met.
+7. **Monitor progress and provide feedback**: I regularly check in with the team member to monitor their progress, offer constructive feedback, and make adjustments as needed to ensure they're on track to meet the objectives.
+
+By following this structured approach, I can effectively delegate tasks that align with an individual's strengths and expertise, while also ensuring that the task is completed to a high standard and meets the required expectations.",0,0.13114754098360656,0.005535135430451458,0.17088607594936708,0.025477707006369428,0.12658227848101267
+Do you prefer working independently or in teams? Why?,"I am comfortable with both, and my preference depends on the task. Independent work helps me concentrate and take ownership of a specific responsibility, while teamwork brings different perspectives and makes it easier to solve complex problems. I try to work independently when appropriate and communicate regularly so my work stays aligned with the team's goals.","I believe that both independence and teamwork have their own benefits, and it ultimately depends on the context of the project or task.
+
+When working independently, I enjoy the autonomy to make decisions, take ownership of my work, and focus on a specific aspect of a problem. This allows me to dive deeper into complex issues, think critically, and develop innovative solutions. Additionally, independent work enables me to set my own pace, manage my time effectively, and prioritize tasks that align with my strengths.
+
+On the other hand, working in teams provides an opportunity to collaborate with others, share knowledge, and leverage diverse perspectives. This can lead to a more comprehensive understanding of the problem, as well as the ability to learn from others' experiences and expertise. Teamwork also fosters communication, adaptability, and a sense of camaraderie, which are essential for delivering high-quality results in a fast-paced environment.
+
+In general, I prefer working in teams when:
+
+* The task requires input from multiple stakeholders or experts.
+* Collaboration is necessary to achieve a common goal.
+* I need to learn from others' strengths and expertise.
+
+However, I also enjoy independent work when:
+
+* I'm working on a complex problem that requires focused attention.
+* I need to make decisions quickly without needing to consult others.
+* I want to take ownership of my work and showcase my skills.
+
+Ultimately, as a flexible and adaptable individual, I'm comfortable with both approaches and can adjust my work style to suit the specific needs of the project or task.",0,0.20512820512820512,0.010824853437777766,0.27009646302250806,0.09061488673139158,0.1607717041800643
