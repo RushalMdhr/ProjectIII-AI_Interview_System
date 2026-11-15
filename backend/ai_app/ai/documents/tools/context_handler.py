@@ -6,6 +6,7 @@ from ai_app.ai.utils.message import system_talking,user_talking
 from ai_app.ai.utils.embeddings import embed_text
 
 import json
+import random
 import re
 
 
@@ -91,10 +92,12 @@ def _retrieve_questions(
 	candidate_ids=None,
 	match_difficulty=True,
 	category=None,
+	query_embedding=None,
 ):
 	difficulty_filter = ""
 	candidate_filter = ""
 	category_filter = ""
+	order_by = "ORDER BY RANDOM()"
 	params = [role]
 	if match_difficulty and session.current_difficulty is not None:
 		difficulty_filter = "AND iq.difficulty = %s"
@@ -113,6 +116,9 @@ def _retrieve_questions(
 		placeholders = ", ".join(["%s"] * len(candidate_ids))
 		candidate_filter = f"AND iq.id IN ({placeholders})"
 		params.extend(candidate_ids)
+	if query_embedding is not None:
+		order_by = "ORDER BY iq.embedding <=> %s::vector, RANDOM()"
+		params.append(query_embedding)
 	params.append(top_k)
 
 	with connection.cursor() as cur:
@@ -130,6 +136,7 @@ def _retrieve_questions(
 				WHERE session_id = %s AND asked_questions_id IS NOT NULL
 			)
 			{candidate_filter}
+			{order_by}
 			LIMIT %s;
 		""", params)
 		print("[ FETCHING NEXT QUESTION ] : ",flush=True)
@@ -141,24 +148,27 @@ def get_question_for_state(user, session, state):
 	if not role:
 		return {"status": "missing_role"}
 
+	query_embedding = embed_text(role)
 	questions = _retrieve_questions(
 		session,
 		role,
-		top_k=1,
+		top_k=3,
 		category=state,
+		query_embedding=query_embedding,
 	)
 	if not questions:
 		questions = _retrieve_questions(
 			session,
 			role,
-			top_k=1,
+			top_k=3,
 			match_difficulty=False,
 			category=state,
+			query_embedding=query_embedding,
 		)
 	if not questions:
 		return {"status": "no_questions", "category": state}
 
-	selected_question = questions[0]
+	selected_question = random.choice(questions)
 	return {
 		"status": "success",
 		"question": {
@@ -181,7 +191,13 @@ def prefetch_next_questions(user, session_id, attempt, top_k=3):
 	if not role:
 		return {"status": "missing_role", "question_ids": []}
 
-	questions = _retrieve_questions(session, role, top_k)
+	query_embedding = embed_text(role)
+	questions = _retrieve_questions(
+		session,
+		role,
+		top_k,
+		query_embedding=query_embedding,
+	)
 	attempt.prefetched_question_ids = [question[0] for question in questions]
 	attempt.save(update_fields=["prefetched_question_ids", "updated_at"])
 	return {"status": "success", "question_ids": attempt.prefetched_question_ids}
@@ -296,21 +312,30 @@ def get_next_questions(
 	if not role:
 		return {"status": "missing_role", "message": "Please provide your target role first."}
 
+	explicit_action = _explicit_interview_action(user_content)
+	query_text = role
+	if explicit_action not in ("REPEAT", "SKIP"):
+		query_text = f"{role}\n{prev_question}\n{user_content}"
+	query_embedding = embed_text(query_text)
+	retrieval_candidate_ids = candidate_ids if query_embedding is None else None
+
 	next_question = _retrieve_questions(
 		session,
 		role,
 		top_k,
-		candidate_ids=candidate_ids,
+		candidate_ids=retrieval_candidate_ids,
 		category=session.current_state,
+		query_embedding=query_embedding,
 	)
 	print("[context_handler] questions found: ", len(next_question), flush=True)
 
-	if not next_question and candidate_ids:
+	if not next_question and retrieval_candidate_ids:
 		next_question = _retrieve_questions(
 			session,
 			role,
 			top_k,
 			category=session.current_state,
+			query_embedding=query_embedding,
 		)
 		print("[context_handler] No questions found with candidate_ids; retried without filter", next_question, flush=True)
 
@@ -321,6 +346,7 @@ def get_next_questions(
 			top_k,
 			match_difficulty=False,
 			category=session.current_state,
+			query_embedding=query_embedding,
 		)
 		print(
 			"[context_handler] No questions found at current difficulty; "
@@ -360,7 +386,7 @@ def get_next_questions(
 			},
 		}
 
-	selected_question = next_question[0]
+	selected_question = random.choice(next_question)
 
 	demo_question = _generate_better_response(
 		result=result,
