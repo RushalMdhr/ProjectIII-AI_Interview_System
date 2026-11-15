@@ -8,14 +8,14 @@ import requests
 
 # Change this later to your friend's real backend URL.
 BASE_URL = "http://localhost:8000"
-LOCAL_DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "common_questions_improved.xlsx"
+LOCAL_DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "simple_questions_with_embeddings.csv"
 
 
 
 def _local_retrieve(query, top_k):
     """Retrieve similar questions locally, excluding the exact query."""
 
-    questions = pd.read_excel(LOCAL_DATA_FILE)["question"].dropna().astype(str)
+    questions = pd.read_csv(LOCAL_DATA_FILE)["question"].dropna().astype(str)
     query_words = set(query.lower().split())
 
     scored_questions = []

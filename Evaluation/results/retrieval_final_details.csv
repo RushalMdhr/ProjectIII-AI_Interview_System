@@ -1,0 +1,41 @@
+question,similarity_score,precision_at_5,recall_at_5,mrr,f1,relevant_total,relevant_retrieved
+Tell me about a time you had to learn something completely new quickly.,0.6657835510301546,1.0,0.2631578947368421,1.0,0.4166666666666667,19,5
+Describe a time you handled a difficult situation professionally.,0.7221440294085043,1.0,0.25,1.0,0.4,20,5
+Where do you see yourself in 5 years?,0.5441519856852214,0.8,0.4,1.0,0.5333333333333333,10,4
+Tell me about a conflict you had with a coworker and how you resolved it.,0.6860866000287985,0.8,0.2,0.5,0.32000000000000006,20,4
+What skills do you hope to develop in your next role?,0.6312755701975394,0.6,0.23076923076923078,1.0,0.33333333333333337,13,3
+What's the most significant change you've had to adapt to at work?,0.621915791934657,1.0,0.25,1.0,0.4,20,5
+How does this role fit into your career path?,0.6204149142423503,0.4,0.2222222222222222,1.0,0.2857142857142857,9,2
+Tell me about a time you worked well within a team.,0.7465404852925451,1.0,0.25,1.0,0.4,20,5
+What are your expectations from leadership in a company?,0.6227951170944818,1.0,0.25,1.0,0.4,20,5
+What motivates you to come to work every day?,0.6518788205953979,0.4,0.2,0.5,0.26666666666666666,10,2
+How do you motivate others in a leadership role?,0.6487151944074362,0.8,0.2222222222222222,1.0,0.3478260869565218,18,4
+What tools or methods help you stay organized?,0.6049132742480301,0.4,0.10526315789473684,0.5,0.16666666666666666,19,2
+How do you build trust with new teammates?,0.6044875787242712,0.6,0.10344827586206896,1.0,0.17647058823529413,29,3
+Describe a time you felt out of place in a workplace culture.,0.6631541844679516,1.0,0.2777777777777778,1.0,0.4347826086956522,18,5
+Do you prefer working independently or in teams? Why?,0.6255622054582448,0.6,0.14285714285714285,0.5,0.23076923076923073,21,3
+Describe a time you led a project or team.,0.7551397647243746,0.8,0.2222222222222222,1.0,0.3478260869565218,18,4
+How do you delegate tasks effectively?,0.5900787937986565,0.4,0.1111111111111111,0.25,0.1739130434782609,18,2
+How do you align with our company values?,0.616236550892734,0.6,0.3,1.0,0.4,10,3
+Why do you want to work at our company?,0.6088080100382113,0.6,0.3,1.0,0.4,10,3
+What makes a good leader in your opinion?,0.5905741789792543,0.8,0.2222222222222222,1.0,0.3478260869565218,18,4
+What are your long-term career aspirations?,0.6250179090472026,0.4,0.3333333333333333,0.5,0.3636363636363636,6,2
+Describe your ideal workday.,0.6010111194187735,0.0,0.0,0.0,0.0,7,0
+How do you deal with feedback that you disagree with?,0.6257498376171996,0.8,0.6666666666666666,1.0,0.7272727272727272,6,4
+What role do you usually play in group settings?,0.5925971070261016,0.0,0.0,0.0,0.0,7,0
+What would you do if you disagreed with your manager?,0.6520902684706209,0.8,0.5,1.0,0.6153846153846154,8,4
+Tell me about a time you were highly motivated to achieve a goal.,0.7038318311558605,1.0,0.25,1.0,0.4,20,5
+How do you contribute to a positive team environment?,0.6548097354142063,0.8,0.21052631578947367,1.0,0.3333333333333333,19,4
+What drives your passion for this field?,0.602935313778963,0.8,0.4,1.0,0.5333333333333333,10,4
+How do you react to sudden changes in priorities?,0.5834064465328573,0.8,0.4,1.0,0.5333333333333333,10,4
+How do you respond when a teammate isn't pulling their weight?,0.6107043083996907,0.4,0.25,1.0,0.3076923076923077,8,2
+Tell me about a time you mentored someone.,0.7049760926275713,1.0,0.2777777777777778,1.0,0.4347826086956522,18,5
+How do you ensure productivity when working remotely?,0.5859702786957215,0.4,0.2857142857142857,0.3333333333333333,0.3333333333333333,7,2
+How do you stay motivated during repetitive tasks?,0.6481541231365325,0.6,0.15789473684210525,1.0,0.25,19,3
+How do you organize and prioritize your daily tasks?,0.6474020706919864,0.2,0.14285714285714285,0.2,0.16666666666666666,7,1
+What type of company culture do you thrive in?,0.6215777475331914,0.8,0.26666666666666666,1.0,0.4,15,4
+How do you handle disagreements within a team?,0.6752156830422413,0.6,0.42857142857142855,0.5,0.5,7,3
+Describe a project where teamwork was essential to success.,0.6809664136655037,0.2,0.125,0.5,0.15384615384615385,8,1
+Describe a time you failed and what you learned from it.,0.6755133048588581,1.0,0.2631578947368421,1.0,0.4166666666666667,19,5
+How do you stay updated with industry trends?,0.532718118278469,0.4,1.0,0.25,0.5714285714285715,2,2
+What kind of growth opportunities are you looking for?,0.5893248497440469,0.8,0.4444444444444444,1.0,0.5714285714285714,9,4

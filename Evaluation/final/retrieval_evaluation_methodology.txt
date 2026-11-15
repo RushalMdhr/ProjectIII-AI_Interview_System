@@ -1,0 +1,20 @@
+RETRIEVAL EVALUATION
+
+Dataset:
+40 common interview questions from the evaluation CSV.
+
+Method:
+Each question was used as a query. Its own row was excluded,
+leaving 39 candidate questions. Cosine similarity was used
+to rank candidates, and the top five were evaluated.
+
+Relevance rule:
+A candidate was considered relevant if it shared at least
+one category or keyword with the query.
+
+Metrics:
+Similarity Score, Precision@5, Recall@5,
+Mean Reciprocal Rank (MRR), and F1 Score.
+
+This is an offline embedding-based evaluation using the CSV
+dataset, not a measurement of the live backend retrieval path.
