@@ -1,9 +1,60 @@
 import logging
+from datetime import timedelta
 from decimal import Decimal
 
-from .models import AIRequestLog, ModelPricing
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework.exceptions import APIException
+
+from .models import (
+    AIRequestLog,
+    ModelPricing,
+    TokenUsageLimit,
+    DEFAULT_TOKEN_LIMIT,
+    DEFAULT_TOKEN_WINDOW_MINUTES,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class TokenLimitExceeded(APIException):
+    status_code = 429
+    default_detail = "Your token usage limit has been reached. Please try again later."
+    default_code = "token_limit_exceeded"
+
+
+def get_token_usage_limit():
+    return TokenUsageLimit.objects.first() or TokenUsageLimit(
+        token_limit=DEFAULT_TOKEN_LIMIT,
+        window_minutes=DEFAULT_TOKEN_WINDOW_MINUTES,
+    )
+
+
+def token_usage_for_user(user):
+    if not getattr(user, "is_authenticated", False):
+        return 0
+    limit = get_token_usage_limit()
+    window_start = timezone.now() - timedelta(minutes=limit.window_minutes)
+    return (
+        AIRequestLog.objects.filter(user=user, created_at__gte=window_start)
+        .aggregate(total=Sum("total_tokens"))
+        .get("total")
+        or 0
+    )
+
+
+def enforce_token_limit(user):
+    if not getattr(user, "is_authenticated", False):
+        return
+    limit = get_token_usage_limit()
+    used_tokens = token_usage_for_user(user)
+    if used_tokens >= limit.token_limit:
+        raise TokenLimitExceeded(
+            detail=(
+                f"Token limit of {limit.token_limit:,} tokens reached for the "
+                f"current {limit.window_minutes}-minute window."
+            )
+        )
 
 
 def _usage_value(usage, *names):
