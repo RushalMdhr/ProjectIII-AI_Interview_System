@@ -1148,9 +1148,9 @@ export default function HomePage() {
                 pct={62}
                 hoverPct={90}
                 bullets={[
-                  "Resume & portfolio feedback",
                   "Career-path planning",
-                  "Salary & offer guidance",
+                  "Guidance",
+                  "Chat with AI",
                 ]}
                 onClick={() => navigate("/ask-question")}
               />
