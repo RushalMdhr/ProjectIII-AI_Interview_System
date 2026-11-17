@@ -9,7 +9,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
-from .models import AIRequestLog, AIUseCaseConfig, ModelPricing
+from .models import AIRequestLog, AIUseCaseConfig, ModelPricing, TokenUsageLimit
+from .services import get_token_usage_limit, token_usage_for_user
 
 
 def require_superuser(request):
@@ -94,6 +95,8 @@ def analytics_timeseries(request):
 @permission_classes([IsAuthenticated])
 def user_usage(request):
     logs = _period_logs(request).filter(user=request.user)
+    token_limit = get_token_usage_limit()
+    used_tokens = token_usage_for_user(request.user)
     totals = logs.aggregate(
         requests=Count("id"),
         input_tokens=Sum("input_tokens"),
@@ -104,6 +107,10 @@ def user_usage(request):
     return JsonResponse({
         key: _serialize(value or 0) for key, value in totals.items()
     } | {
+        "token_limit": token_limit.token_limit,
+        "tokens_used_in_window": used_tokens,
+        "tokens_remaining": max(token_limit.token_limit - used_tokens, 0),
+        "window_minutes": token_limit.window_minutes,
         "daily": list(
             logs.annotate(day=TruncDate("created_at"))
             .values("day")
@@ -126,6 +133,55 @@ def user_usage(request):
             )[:25]
         ),
     })
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def token_usage_limit(request):
+    require_superuser(request)
+    if request.method == "GET":
+        limit = get_token_usage_limit()
+        return JsonResponse({
+            "token_limit": limit.token_limit,
+            "window_minutes": limit.window_minutes,
+            "updated_at": limit.updated_at,
+        })
+
+    try:
+        token_limit = int(request.data.get("token_limit"))
+        window_minutes = int(request.data.get("window_minutes"))
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"detail": "token_limit and window_minutes must be whole numbers."},
+            status=400,
+        )
+    if not 1 <= token_limit <= 2_147_483_647:
+        return JsonResponse(
+            {"detail": "token_limit must be between 1 and 2,147,483,647."},
+            status=400,
+        )
+    if not 1 <= window_minutes <= 525_600:
+        return JsonResponse(
+            {"detail": "window_minutes must be between 1 and 525,600."},
+            status=400,
+        )
+
+    existing_limit = TokenUsageLimit.objects.first()
+    if existing_limit:
+        existing_limit.token_limit = token_limit
+        existing_limit.window_minutes = window_minutes
+        existing_limit.save(update_fields=["token_limit", "window_minutes", "updated_at"])
+        limit = existing_limit
+    else:
+        limit = TokenUsageLimit.objects.create(
+            token_limit=token_limit,
+            window_minutes=window_minutes,
+        )
+    return JsonResponse({
+        "token_limit": limit.token_limit,
+        "window_minutes": limit.window_minutes,
+        "message": "Token usage limit saved.",
+    }, status=201)
 
 
 @api_view(["GET"])

@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import AIRequestLog, AIUseCaseConfig, ModelPricing
+from .models import AIRequestLog, AIUseCaseConfig, ModelPricing, TokenUsageLimit
+
+
+@admin.register(TokenUsageLimit)
+class TokenUsageLimitAdmin(admin.ModelAdmin):
+    list_display = ("token_limit", "window_minutes", "updated_at")
+
+    def has_add_permission(self, request):
+        return not TokenUsageLimit.objects.exists()
 
 
 @admin.register(ModelPricing)

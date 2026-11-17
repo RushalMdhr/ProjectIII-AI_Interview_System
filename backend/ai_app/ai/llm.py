@@ -2,10 +2,11 @@ import time
 
 from ai_app.ai.utils.request_ollama import ollama_client
 from .utils.request_groq import get_groq_client
-from ai_app.services import record_request
+from ai_app.services import enforce_token_limit, record_request
 
 
 def ai(msg, model="llama3.2:latest", tools="auto", user=None, use_case="general_chat", session=None,format=None, temperature=0.1):
+    enforce_token_limit(user)
     started_at = time.perf_counter()
     try:
         response = ollama_client.chat(
@@ -36,6 +37,7 @@ def ai(msg, model="llama3.2:latest", tools="auto", user=None, use_case="general_
 
 
 def groq_ai(msg, model="openai/gpt-oss-120b", user=None, use_case="general_chat", session=None):
+    enforce_token_limit(user)
     started_at = time.perf_counter()
     try:
         response = get_groq_client().chat.completions.create(

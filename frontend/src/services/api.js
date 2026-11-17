@@ -238,6 +238,16 @@ export async function saveUseCaseConfig(payload) {
   return res.data;
 }
 
+export async function getTokenUsageLimit() {
+  const res = await client.get("/ai/analytics/token-limit/");
+  return res.data;
+}
+
+export async function saveTokenUsageLimit(payload) {
+  const res = await client.post("/ai/analytics/token-limit/", payload);
+  return res.data;
+}
+
 
 export async function startChatInterview(sessionId) {
   const res = await client.post(`/chats/session/${sessionId}/start-interview/`);
