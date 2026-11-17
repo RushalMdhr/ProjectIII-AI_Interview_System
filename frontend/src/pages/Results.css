@@ -25,6 +25,12 @@
   transition: color 160ms ease;
 }
 
+.results-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
 .results-back:hover,
 .results-secondary-button:hover {
   color: #45e0d0;

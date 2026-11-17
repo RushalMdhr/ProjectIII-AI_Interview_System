@@ -24,6 +24,7 @@ import OAuthCallback from "./pages/OAuthCallback";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import InterviewHistory from "./pages/InterviewHistory";
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
@@ -102,6 +103,14 @@ function AppChrome() {
             }
           />
           <Route
+            path="/interview-details"
+            element={
+              <ProtectedRoute>
+                <InterviewHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/ask-question"
             element={
               <ProtectedRoute>
@@ -122,7 +131,7 @@ function App() {
     <>
       <style>{`
         .Toastify__toast-container {
-          top: 18px;
+          top: 80px;
           right: 18px;
         }
 

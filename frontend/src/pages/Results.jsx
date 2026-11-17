@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   ArrowDown,
   ArrowLeft,
@@ -275,6 +275,7 @@ function QuestionReview({ questions }) {
 }
 
 export default function Results() {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
   const [results, setResults] = useState(null);
@@ -393,9 +394,16 @@ export default function Results() {
   return (
     <div className="results-page">
       <main className="results-content">
-        <Link className="results-back" to="/interview-setup">
-          <ArrowLeft size={16} /> Start another interview
-        </Link>
+        <div className="results-navigation">
+          {location.state?.fromHistory && (
+            <Link className="results-back" to="/interview-details">
+              <ArrowLeft size={16} /> Back to interview history
+            </Link>
+          )}
+          <Link className="results-back" to="/interview-setup">
+            <ArrowLeft size={16} /> Start another interview
+          </Link>
+        </div>
         <header className="results-header">
           <span className="results-eyebrow">INTERVIEW COMPLETE</span>
           <h1>Your performance, at a glance.</h1>
