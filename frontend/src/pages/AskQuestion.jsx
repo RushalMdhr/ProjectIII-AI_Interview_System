@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,9 +10,10 @@ import {
   Menu,
   MessageSquarePlus,
   Send,
+  Trash2,
 } from "lucide-react";
 import {
-  createChatSession,
+  deleteChatSession,
   getChatMessages,
   getChatSessions,
   sendChatMessage,
@@ -31,6 +33,8 @@ export default function AskQuestion() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
+  const [contextMenu, setContextMenu] = useState(null);
+  const [deletingSessionId, setDeletingSessionId] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -72,6 +76,18 @@ export default function AskQuestion() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
 
+  useEffect(() => {
+    const closeContextMenu = () => setContextMenu(null);
+
+    document.addEventListener("click", closeContextMenu);
+    document.addEventListener("scroll", closeContextMenu, true);
+
+    return () => {
+      document.removeEventListener("click", closeContextMenu);
+      document.removeEventListener("scroll", closeContextMenu, true);
+    };
+  }, []);
+
   const handleSelectSession = async (session) => {
     if (session.id === sessionId || isLoadingMessages || isSending) return;
 
@@ -111,10 +127,46 @@ export default function AskQuestion() {
   const handleNewChat = () => {
     if (isSending) return;
 
+    setContextMenu(null);
     setSessionId(null);
     setMessages([]);
     setInput("");
     setError("");
+  };
+
+  const handleDeleteSession = async (session) => {
+    setContextMenu(null);
+
+    if (
+      isSending ||
+      deletingSessionId ||
+      !window.confirm(`Delete "${session.title || "New Chat Session"}"?`)
+    ) {
+      return;
+    }
+
+    setDeletingSessionId(session.id);
+    setError("");
+
+    try {
+      await deleteChatSession(session.id);
+      setSessions((current) =>
+        current.filter((currentSession) => currentSession.id !== session.id),
+      );
+
+      if (session.id === sessionId) {
+        setSessionId(null);
+        setMessages([]);
+        setInput("");
+      }
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.error ||
+          "Could not delete this conversation.",
+      );
+    } finally {
+      setDeletingSessionId(null);
+    }
   };
 
   const handleSend = async () => {
@@ -230,15 +282,91 @@ export default function AskQuestion() {
               <div className="chat-sidebar-status">No chats yet</div>
             )}
             {sessions.map((session) => (
-              <button
-                className={`chat-session-item ${session.id === sessionId ? "selected" : ""}`}
-                key={session.id}
-                onClick={() => handleSelectSession(session)}
-                disabled={isLoadingMessages || isSending}
-              >
-                <Menu size={14} />
-                <span>{session.title || "New Chat Session"}</span>
-              </button>
+              <div className="chat-session-wrapper" key={session.id}>
+                <button
+                  className={`chat-session-item ${
+                    session.id === sessionId ? "selected" : ""
+                  }`}
+                  onClick={() => handleSelectSession(session)}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const rect = event.currentTarget.getBoundingClientRect();
+
+                    const menuWidth = 140;
+                    const menuHeight = 42;
+                    const gap = 6;
+
+                    setContextMenu({
+                      session,
+                      top: Math.max(
+                        gap,
+                        Math.min(
+                          rect.top,
+                          window.innerHeight - menuHeight - gap,
+                        ),
+                      ),
+                      left: Math.min(
+                        rect.right + gap,
+                        window.innerWidth - menuWidth - gap
+                      ),
+                    });
+                  }}
+                  disabled={
+                    isLoadingMessages ||
+                    isSending ||
+                    deletingSessionId === session.id
+                  }
+                >
+                  <Menu size={14} />
+                  <span>{session.title || "New Chat Session"}</span>
+                </button>
+
+                {contextMenu?.session.id === session.id && (
+                  createPortal(
+                    <div
+                      className="
+                        fixed z-[9999]
+                        w-[140px] p-1
+                        rounded-lg
+                        border border-slate-700
+                        bg-slate-800
+                        shadow-xl shadow-black/30
+                        animate-in fade-in slide-in-from-left-1
+                        duration-150
+                      "
+                      style={{
+                        position: "fixed",
+                        zIndex: 9999,
+                        top: contextMenu.top,
+                        left: contextMenu.left,
+                      }}
+                      role="menu"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleDeleteSession(session)}
+                        disabled={isSending || Boolean(deletingSessionId)}
+                        className="
+                          flex w-full items-center gap-2
+                          rounded-md px-2.5 py-2
+                          text-sm text-red-400
+                          transition-colors
+                          hover:bg-red-400/10 hover:text-red-300
+                          disabled:cursor-not-allowed disabled:opacity-50
+                        "
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </div>,
+                    document.body,
+                  )
+                )}
+              </div>
             ))}
           </div>
         )}

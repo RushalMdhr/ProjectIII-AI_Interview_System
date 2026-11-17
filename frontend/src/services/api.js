@@ -141,6 +141,11 @@ export async function getChatSessions() {
   return res.data;
 }
 
+export async function deleteChatSession(sessionId) {
+  const res = await client.delete(`/chats/session/${sessionId}/delete`);
+  return res.data;
+}
+
 
 export async function sendChatMessage(userContent, sessionId = null) {
   const payload = {
