@@ -6,6 +6,8 @@ from rest_framework.test import APIClient
 
 from accounts.models import User, UserProfile
 from chats.models import ChatSession, InterviewFeedback
+from chats.serializers import InterviewFeedbackSerializer
+from common.RAG_models import Document_Source, InterviewQuestions
 
 
 class InterviewFlowTests(TestCase):
@@ -38,6 +40,97 @@ class InterviewFlowTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(len(response.data), 1)
 		self.assertEqual(response.data[0]["use_case"], "general_chat")
+
+	def test_interview_session_list_includes_archived_sessions_for_current_user(self):
+		other_user = User.objects.create_user(
+			username="another-candidate",
+			email="another@example.test",
+			password="test-password",
+		)
+		ChatSession.objects.create(
+			user=other_user,
+			use_case="interview_assessment",
+		)
+		ChatSession.objects.create(
+			user=self.user,
+			use_case="general_chat",
+		)
+		archived_session = ChatSession.objects.create(
+			user=self.user,
+			use_case="interview_assessment",
+			halted=True,
+			archived=True,
+		)
+
+		response = self.client.get(reverse("interview_sessions"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertCountEqual(
+			[item["id"] for item in response.data],
+			[self.session.id, archived_session.id],
+		)
+
+	def test_halt_interview_marks_session_halted_and_archived(self):
+		response = self.client.post(
+			reverse("halt_interview", kwargs={"session_id": self.session.id})
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.session.refresh_from_db()
+		self.assertTrue(self.session.halted)
+		self.assertTrue(self.session.archived)
+
+	def test_halt_interview_does_not_modify_another_users_session(self):
+		other_user = User.objects.create_user(
+			username="another-candidate",
+			email="another@example.test",
+			password="test-password",
+		)
+		other_session = ChatSession.objects.create(
+			user=other_user,
+			use_case="interview_assessment",
+		)
+
+		response = self.client.post(
+			reverse("halt_interview", kwargs={"session_id": other_session.id})
+		)
+
+		self.assertEqual(response.status_code, 404)
+		other_session.refresh_from_db()
+		self.assertFalse(other_session.halted)
+		self.assertFalse(other_session.archived)
+
+	def test_interview_feedback_includes_question_source(self):
+		source = Document_Source.objects.create(
+			name="Microsoft",
+			description="https://example.com/interview-question",
+		)
+		question = InterviewQuestions.objects.create(
+			question="How would you design a reliable API?",
+			answer="",
+			role="Backend Developer",
+			experience="any",
+			difficulty="medium",
+			keywords=[],
+			weights=[],
+			categories=["technical"],
+			source=source,
+		)
+		attempt = InterviewFeedback.objects.create(
+			session=self.session,
+			asked_questions=question,
+			question_text=question.question,
+		)
+
+		serialized_attempt = InterviewFeedbackSerializer(attempt).data
+
+		self.assertEqual(
+			serialized_attempt["source"],
+			{
+				"name": "Microsoft",
+				"description": "https://example.com/interview-question",
+			},
+		)
 
 	@patch(
 		"chats.views.get_question_for_state",

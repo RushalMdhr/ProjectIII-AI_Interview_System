@@ -2,10 +2,22 @@
 
 from rest_framework import serializers
 from .models import ChatSession, ChatMessage, InterviewFeedback
+from common.RAG_models import Document_Source
+
+
+class DocumentSourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document_Source
+        fields = ['name', 'description']
+        read_only_fields = fields
 
 
 class InterviewFeedbackSerializer(serializers.ModelSerializer):
     expected_answer = serializers.SerializerMethodField()
+    source = DocumentSourceSerializer(
+        source='asked_questions.source',
+        read_only=True,
+    )
 
     def get_expected_answer(self, instance):
         if instance.asked_questions_id:
@@ -18,6 +30,7 @@ class InterviewFeedbackSerializer(serializers.ModelSerializer):
             'id',
             'session',
             'question_text',
+            'source',
             'expected_answer',
             'candidate_answer',
             'category',

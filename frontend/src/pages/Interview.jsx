@@ -1,8 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bot, LoaderCircle, Play, Send, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  ExternalLink,
+  LoaderCircle,
+  Play,
+  Send,
+  UserRound,
+} from "lucide-react";
 import {
   createChatSession,
+  haltInterviewSession,
   prefetchInterviewQuestions,
   sendChatMessage,
   startChatInterview,
@@ -12,6 +21,13 @@ const MINIMUM_INTERVIEW_ANSWER_WORDS = 3;
 
 const countInterviewAnswerWords = (text) =>
   text.match(/[\p{L}]+(?:['’][\p{L}]+)*/gu)?.length || 0;
+
+const isHttpUrl = (value) => /^https?:\/\/\S+$/i.test(value?.trim() || "");
+
+const getSourceUrl = (source) =>
+  [source?.description, source?.name]
+    .map((value) => value?.trim())
+    .find((value) => value && isHttpUrl(value)) || "";
 
 export default function Interview() {
   const { state } = useLocation();
@@ -27,10 +43,40 @@ export default function Interview() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState(state?.sessionId || null);
+  const sessionIdRef = useRef(sessionId);
+  const interviewEndedRef = useRef(isInterviewEnded);
+  const haltRequestSentRef = useRef(false);
+  sessionIdRef.current = sessionId;
 
   const latestAssistantId = [...messages]
     .reverse()
     .find((message) => message.role === "assistant")?.id;
+
+  useEffect(() => {
+    const haltIfLeaving = (event) => {
+      if (event?.persisted) return;
+
+      const activeSessionId = sessionIdRef.current;
+      if (
+        !activeSessionId ||
+        interviewEndedRef.current ||
+        haltRequestSentRef.current
+      ) {
+        return;
+      }
+
+      haltRequestSentRef.current = true;
+      haltInterviewSession(activeSessionId, { keepalive: true }).catch((error) => {
+        console.error("Could not halt the interview after leaving the page.", error);
+      });
+    };
+
+    window.addEventListener("pagehide", haltIfLeaving);
+    return () => {
+      window.removeEventListener("pagehide", haltIfLeaving);
+      haltIfLeaving();
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasStarted || !latestAssistantId || !sessionId) return;
@@ -54,6 +100,7 @@ export default function Interview() {
           )
         ).id;
 
+      sessionIdRef.current = activeSessionId;
       setSessionId(activeSessionId);
 
       const response = await startChatInterview(activeSessionId);
@@ -67,6 +114,7 @@ export default function Interview() {
         id: response.interview_feedback.id || `assistant-${Date.now()}`,
         role: "assistant",
         content: opening,
+        source: response.interview_feedback.source,
       }]);
       setHasStarted(true);
     } catch (requestError) {
@@ -122,6 +170,7 @@ export default function Interview() {
       const interviewFeedback = response.interview_feedback;
       const nextQuestion = response.next_question;
       const interviewEnded = response.session?.halted || response.session?.archived;
+      if (interviewEnded) interviewEndedRef.current = true;
       setIsInterviewEnded(Boolean(interviewEnded));
       const savedFeedback = interviewFeedback?.feedback;
       const feedbackText = typeof savedFeedback === "string"
@@ -138,6 +187,7 @@ export default function Interview() {
           id: nextQuestion?.id || interviewFeedback?.id || `assistant-${Date.now()}`,
           role: "assistant",
           content: assistantContent,
+          source: nextQuestion?.source,
         }]);
       } else {
         setError(response.error || "The interview did not return a reply.");
@@ -300,7 +350,7 @@ export default function Interview() {
         }
 
         .interview-bubble {
-          max-width: min(78%, 650px);
+          max-width: 100%;
           padding: 13px 16px;
           border: 1px solid rgba(255,255,255,.12);
           border-radius: 16px;
@@ -308,6 +358,43 @@ export default function Interview() {
           font-size: 16px;
           line-height: 1.55;
           white-space: pre-wrap;
+        }
+
+        .interview-message-content {
+          max-width: min(78%, 650px);
+          min-width: 0;
+        }
+
+        .interview-source {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 4px 7px;
+          margin: 7px 4px 0;
+          color: #C2C4EC;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+
+        .interview-source-label {
+          color: #A6A9D0;
+        }
+
+        .interview-source-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          color: #C7BEFF;
+          text-decoration: none;
+        }
+
+        .interview-source-link:hover {
+          color: #FBFAFF;
+          text-decoration: underline;
+        }
+
+        .interview-source-description {
+          overflow-wrap: anywhere;
         }
 
         .interview-message.user .interview-bubble {
@@ -435,7 +522,41 @@ export default function Interview() {
                 )}
               </div>
 
-              <div className="interview-bubble">{message.content}</div>
+              <div className="interview-message-content">
+                <div className="interview-bubble">{message.content}</div>
+                {message.role === "assistant" &&
+                  (message.source?.name || message.source?.description) && (() => {
+                    const sourceUrl = getSourceUrl(message.source);
+                    const sourceName = message.source.name?.trim();
+                    const sourceDescription = message.source.description?.trim();
+                    const sourceLabel = sourceName && !isHttpUrl(sourceName)
+                      ? sourceName
+                      : "Open source";
+
+                    return (
+                      <div className="interview-source">
+                        <span className="interview-source-label">Source:</span>
+                        {sourceUrl ? (
+                          <a
+                            className="interview-source-link"
+                            href={sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {sourceLabel} <ExternalLink size={12} aria-hidden="true" />
+                          </a>
+                        ) : (
+                          sourceName && <span>{sourceName}</span>
+                        )}
+                        {sourceDescription && !isHttpUrl(sourceDescription) && (
+                          <span className="interview-source-description">
+                            {sourceDescription}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+              </div>
             </div>
           ))}
 

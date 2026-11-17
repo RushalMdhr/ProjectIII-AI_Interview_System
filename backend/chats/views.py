@@ -687,6 +687,42 @@ def sessions(request):
             status=status.HTTP_201_CREATED
         )
 
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def interview_sessions(request):
+    interview_sessions = ChatSession.objects.filter(
+        user=request.user,
+        use_case="interview_assessment",
+    ).order_by("-updated_at")
+    serializer = ChatSessionSerializer(interview_sessions, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def halt_interview(request, session_id):
+    try:
+        session = ChatSession.objects.get(
+            id=session_id,
+            user=request.user,
+            use_case="interview_assessment",
+        )
+    except ChatSession.DoesNotExist:
+        return Response(
+            {"error": "Interview session not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if not session.halted or not session.archived:
+        session.halted = True
+        session.archived = True
+        session.save(update_fields=["halted", "archived", "updated_at"])
+        _update_session_scores(session)
+
+    return Response(ChatSessionSerializer(session).data, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_message(request):
@@ -992,7 +1028,10 @@ def get_interview_results(request, session_id):
     if request.query_params.get("include") == "review":
         attempts = session.interview_feedbacks.exclude(
             candidate_answer="",
-        ).select_related("asked_questions").order_by("created_at", "id")
+        ).select_related(
+            "asked_questions",
+            "asked_questions__source",
+        ).order_by("created_at", "id")
         results["questions"] = InterviewFeedbackSerializer(
             attempts,
             many=True,
