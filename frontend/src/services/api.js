@@ -141,6 +141,40 @@ export async function getChatSessions() {
   return res.data;
 }
 
+export async function getInterviewSessions() {
+  const res = await client.get("/chats/interview-sessions/");
+  return res.data;
+}
+
+export async function haltInterviewSession(sessionId, { keepalive = false } = {}) {
+  if (!keepalive) {
+    const res = await client.post(`/chats/session/${sessionId}/halt/`);
+    return res.data;
+  }
+
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    throw new Error("Cannot halt an interview without an access token.");
+  }
+
+  const response = await fetch(
+    `${baseURL}/chats/session/${sessionId}/halt/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      keepalive: true,
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`Could not halt interview session (${response.status}).`);
+  }
+  return response.json();
+}
+
 export async function deleteChatSession(sessionId) {
   const res = await client.delete(`/chats/session/${sessionId}/delete`);
   return res.data;

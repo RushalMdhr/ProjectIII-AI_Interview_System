@@ -9,11 +9,15 @@ from chats.views import (
     prefetch_interview_questions,
     suggest_interview_answer,
     get_interview_results,
+    interview_sessions,
+    halt_interview,
 )
 
 
 urlpatterns = [
     path('session/', sessions, name='sessions'),
+    path('interview-sessions/', interview_sessions, name='interview_sessions'),
+    path('session/<int:session_id>/halt/', halt_interview, name='halt_interview'),
     path('message/', send_message, name='send_message'),
     path('session/<int:session_id>/start-interview/', start_interview, name='start_interview'),
     path('session/<int:session_id>/prefetch-questions/', prefetch_interview_questions, name='prefetch_interview_questions'),
