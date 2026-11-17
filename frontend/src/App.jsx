@@ -25,6 +25,7 @@ import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import InterviewHistory from "./pages/InterviewHistory";
+import UsageInsights from "./pages/UsageInsights";
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
@@ -107,6 +108,14 @@ function AppChrome() {
             element={
               <ProtectedRoute>
                 <InterviewHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/usage-insights"
+            element={
+              <ProtectedRoute>
+                <UsageInsights />
               </ProtectedRoute>
             }
           />

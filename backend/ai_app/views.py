@@ -18,8 +18,11 @@ def require_superuser(request):
 
 
 def _period_logs(request):
+    period = str(request.GET.get("days", "30")).lower()
+    if period in {"all", "lifetime"}:
+        return AIRequestLog.objects.all()
     try:
-        days = min(max(int(request.GET.get("days", 30)), 1), 365)
+        days = min(max(int(period), 1), 365)
     except (TypeError, ValueError):
         days = 30
     return AIRequestLog.objects.filter(
@@ -84,6 +87,44 @@ def analytics_timeseries(request):
             )
             .order_by("day")
         )
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_usage(request):
+    logs = _period_logs(request).filter(user=request.user)
+    totals = logs.aggregate(
+        requests=Count("id"),
+        input_tokens=Sum("input_tokens"),
+        output_tokens=Sum("output_tokens"),
+        total_tokens=Sum("total_tokens"),
+        failed_requests=Count("id", filter=Q(success=False)),
+    )
+    return JsonResponse({
+        key: _serialize(value or 0) for key, value in totals.items()
+    } | {
+        "daily": list(
+            logs.annotate(day=TruncDate("created_at"))
+            .values("day")
+            .annotate(
+                requests=Count("id"),
+                total_tokens=Sum("total_tokens"),
+            )
+            .order_by("day")
+        ),
+        "by_use_case": list(
+            logs.values("use_case")
+            .annotate(requests=Count("id"), total_tokens=Sum("total_tokens"))
+            .order_by("-total_tokens")
+        ),
+        "recent": list(
+            logs.values(
+                "id", "provider", "model", "use_case",
+                "input_tokens", "output_tokens", "total_tokens",
+                "success", "created_at",
+            )[:25]
+        ),
     })
 
 

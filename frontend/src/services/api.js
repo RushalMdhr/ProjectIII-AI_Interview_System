@@ -213,6 +213,11 @@ export async function getUserActivity(days = 30) {
   return res.data;
 }
 
+export async function getMyUsage(days = 30) {
+  const res = await client.get(`/ai/usage/me/?days=${days}`);
+  return res.data;
+}
+
 export async function getModelPricing() {
   const res = await client.get("/ai/analytics/pricing/");
   return res.data;

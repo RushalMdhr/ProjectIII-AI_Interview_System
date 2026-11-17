@@ -242,6 +242,22 @@ export default function Navbar() {
                 </Link>
 
                 <Link
+                  to="/usage-insights"
+                  role="menuitem"
+                  onClick={() => setAccountMenuOpen(false)}
+                  style={{
+                    display: "block",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    color: tokens.text,
+                    textDecoration: "none",
+                    fontSize: 13.5,
+                  }}
+                >
+                  Usage insights
+                </Link>
+
+                <Link
                   to="/interview-details"
                   role="menuitem"
                   onClick={() => setAccountMenuOpen(false)}
