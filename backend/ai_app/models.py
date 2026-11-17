@@ -2,6 +2,25 @@ from django.db import models
 from django.conf import settings
 
 
+DEFAULT_TOKEN_LIMIT = 100_000
+DEFAULT_TOKEN_WINDOW_MINUTES = 1_440
+
+
+class TokenUsageLimit(models.Model):
+    token_limit = models.PositiveIntegerField(default=DEFAULT_TOKEN_LIMIT)
+    window_minutes = models.PositiveIntegerField(
+        default=DEFAULT_TOKEN_WINDOW_MINUTES
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Token usage limit"
+        verbose_name_plural = "Token usage limit"
+
+    def __str__(self):
+        return f"{self.token_limit:,} tokens per {self.window_minutes} minutes"
+
+
 class ModelPricing(models.Model):
     PROVIDER_CHOICES = (
         ("groq", "Groq"),
