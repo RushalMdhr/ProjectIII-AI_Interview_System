@@ -17,6 +17,14 @@ const label = (value) =>
   String(value || "general_chat")
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const windowLabel = (minutes) => {
+  const hours = Number(minutes || 0) / 60;
+  const days = Math.round(hours / 24);
+  const roundedHours = Math.round(hours);
+  return hours >= 24
+    ? `${days} day${days === 1 ? "" : "s"}`
+    : `${roundedHours} hour${roundedHours === 1 ? "" : "s"}`;
+};
 
 function Metric({ icon: Icon, title, value, detail }) {
   return (
@@ -90,6 +98,34 @@ export default function UsageInsights() {
             <Metric icon={MessageSquare} title="Input tokens" value={number(usage.input_tokens)} detail="Tokens sent" />
             <Metric icon={MessageSquare} title="Output tokens" value={number(usage.output_tokens)} detail="Tokens received" />
             <Metric icon={usage.failed_requests ? AlertCircle : CheckCircle2} title="Completed requests" value={number(usage.requests - usage.failed_requests)} detail={`${number(usage.failed_requests)} unsuccessful`} />
+          </section>
+
+          <section style={{ background: colors.panel, border: `1px solid ${colors.border}`, borderRadius: 18, padding: 26, marginTop: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "baseline", flexWrap: "wrap" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Token limit</h2>
+                <p style={{ margin: "6px 0 0", color: colors.muted, fontSize: 13 }}>
+                  Rolling limit for your account
+                </p>
+              </div>
+              <strong style={{ color: colors.teal, fontSize: 16 }}>
+                {number(usage.tokens_remaining)} remaining
+              </strong>
+            </div>
+            <div style={{ height: 10, marginTop: 20, background: "rgba(255,255,255,0.1)", borderRadius: 999 }}>
+              <div
+                style={{
+                  width: `${Math.min((Number(usage.tokens_used_in_window || 0) / Math.max(Number(usage.token_limit || 0), 1)) * 100, 100)}%`,
+                  height: "100%",
+                  background: Number(usage.tokens_remaining) === 0 ? colors.red : colors.teal,
+                  borderRadius: 999,
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 10, color: colors.muted, fontSize: 12 }}>
+              <span>{number(usage.tokens_used_in_window)} used of {number(usage.token_limit)} tokens</span>
+              <span>Resets continuously · {windowLabel(usage.window_minutes)} window</span>
+            </div>
           </section>
 
           <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.7fr) minmax(300px, 0.8fr)", gap: 20, marginTop: 20 }}>

@@ -24,8 +24,10 @@ import {
   getModelPricing,
   getUseCaseConfigs,
   getUserActivity,
+  getTokenUsageLimit,
   saveModelPricing,
   saveUseCaseConfig,
+  saveTokenUsageLimit,
 } from "../services/api";
 
 // ----------------------------------
@@ -294,7 +296,7 @@ function UserActivity({ activity }) {
   );
 }
 
-function SettingsPanel({ pricing, configs, onSave, onSaveConfig }) {
+function SettingsPanel({ pricing, configs, tokenLimit, onSave, onSaveConfig, onSaveTokenLimit }) {
   const pricedModels = DEFAULT_PRICED_MODELS;
   const [form, setForm] = useState({
     provider: "ollama",
@@ -318,6 +320,20 @@ function SettingsPanel({ pricing, configs, onSave, onSaveConfig }) {
     interview_assessment: { provider: "ollama", model: "llama3.2:latest" },
   });
   const [savingConfig, setSavingConfig] = useState("");
+  const [limitForm, setLimitForm] = useState({
+    token_limit: 100000,
+    window_minutes: 1440,
+  });
+  const [savingLimit, setSavingLimit] = useState(false);
+
+  useEffect(() => {
+    if (tokenLimit) {
+      setLimitForm({
+        token_limit: tokenLimit.token_limit,
+        window_minutes: tokenLimit.window_minutes,
+      });
+    }
+  }, [tokenLimit]);
 
   useEffect(() => {
     if (!configs?.length) return;
@@ -359,8 +375,56 @@ function SettingsPanel({ pricing, configs, onSave, onSaveConfig }) {
     }
   };
 
+  const submitLimit = async (event) => {
+    event.preventDefault();
+    setSavingLimit(true);
+    try {
+      await onSaveTokenLimit({
+        token_limit: Number(limitForm.token_limit),
+        window_minutes: Number(limitForm.window_minutes),
+      });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
+      <section className="rounded-xl border border-[#253247] bg-[#111A29] p-6">
+        <h2 className="mb-2 text-base font-semibold">Per-user token limit</h2>
+        <p className="mb-6 text-sm text-[#8492A8]">
+          Every user shares this rolling token limit. The default is 100,000 tokens per 24 hours.
+        </p>
+        <form onSubmit={submitLimit} className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          <label className="text-sm text-[#A1AEC1]">
+            Tokens per window
+            <input
+              type="number"
+              min="1"
+              max="2147483647"
+              required
+              value={limitForm.token_limit}
+              onChange={(e) => setLimitForm({ ...limitForm, token_limit: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-[#253247] bg-[#0D1422] p-3 text-sm text-[#E2E8F0]"
+            />
+          </label>
+          <label className="text-sm text-[#A1AEC1]">
+            Window (minutes)
+            <input
+              type="number"
+              min="1"
+              max="525600"
+              required
+              value={limitForm.window_minutes}
+              onChange={(e) => setLimitForm({ ...limitForm, window_minutes: e.target.value })}
+              className="mt-2 w-full rounded-lg border border-[#253247] bg-[#0D1422] p-3 text-sm text-[#E2E8F0]"
+            />
+          </label>
+          <button disabled={savingLimit} className="rounded-lg bg-[#42DCC6] px-4 py-3 text-sm font-bold text-[#09131C]">
+            {savingLimit ? "Saving..." : "Save limit"}
+          </button>
+        </form>
+      </section>
       <section className="rounded-xl border border-[#253247] bg-[#111A29] p-6">
         <h2 className="mb-2 text-base font-semibold">Use-case routing</h2>
         <p className="mb-6 text-sm text-[#8492A8]">Choose the provider and model for each use case. Changes apply to new requests.</p>
@@ -546,6 +610,7 @@ export default function AdminDashboard() {
   const [activity, setActivity] = useState(null);
   const [pricing, setPricing] = useState([]);
   const [useCaseConfigs, setUseCaseConfigs] = useState([]);
+  const [tokenLimit, setTokenLimit] = useState(null);
   const [section, setSection] = useState("overview");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -582,12 +647,14 @@ export default function AdminDashboard() {
 
   const loadPricing = async () => {
     try {
-      const [pricingResult, configResult] = await Promise.all([
+      const [pricingResult, configResult, tokenLimitResult] = await Promise.all([
         getModelPricing(),
         getUseCaseConfigs(),
+        getTokenUsageLimit(),
       ]);
       setPricing(pricingResult.pricing || []);
       setUseCaseConfigs(configResult.configs || []);
+      setTokenLimit(tokenLimitResult);
     } catch (requestError) {
       setError(requestError.response?.data?.detail || "Unable to load settings.");
     }
@@ -601,6 +668,10 @@ export default function AdminDashboard() {
   const saveConfig = async (payload) => {
     await saveUseCaseConfig(payload);
     await loadPricing();
+  };
+
+  const saveTokenLimit = async (payload) => {
+    setTokenLimit(await saveTokenUsageLimit(payload));
   };
 
   useEffect(() => {
@@ -714,7 +785,14 @@ export default function AdminDashboard() {
           {section === "users" ? (
             <UserActivity activity={activity} />
           ) : section === "settings" ? (
-            <SettingsPanel pricing={pricing} configs={useCaseConfigs} onSave={savePricing} onSaveConfig={saveConfig} />
+            <SettingsPanel
+              pricing={pricing}
+              configs={useCaseConfigs}
+              tokenLimit={tokenLimit}
+              onSave={savePricing}
+              onSaveConfig={saveConfig}
+              onSaveTokenLimit={saveTokenLimit}
+            />
           ) : (
           <>
           {/* Loading */}
