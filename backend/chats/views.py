@@ -15,6 +15,7 @@ from ai_app.ai.utils.chats_handler import (
 )
 from ai_app.ai.utils.Evaluator import evaluate_candidate_answer
 from ai_app.ai.utils.chat_services import generate_response
+from ai_app.services import TokenLimitExceeded
 
 from .models import ChatSession, ChatMessage, InterviewFeedback
 from accounts.models import User, UserProfile
@@ -319,6 +320,8 @@ def suggest_interview_answer(request, session_id):
             user=request.user,
             session=session,
         )
+    except TokenLimitExceeded:
+        raise
     except Exception as error:
         print(f"[INTERVIEW] Answer suggestion generation failed: {error}", flush=True)
         return Response(
@@ -879,6 +882,8 @@ def send_message(request):
                 flush=True
             )
 
+        except TokenLimitExceeded:
+            raise
         except Exception as e:
 
             print(
