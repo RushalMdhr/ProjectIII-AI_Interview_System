@@ -7,10 +7,12 @@ import {
   LoaderCircle,
   Play,
   Send,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import {
   createChatSession,
+  generateInterviewAnswerSuggestion,
   haltInterviewSession,
   prefetchInterviewQuestions,
   sendChatMessage,
@@ -41,6 +43,7 @@ export default function Interview() {
   const [hasStarted, setHasStarted] = useState(false);
   const [isInterviewEnded, setIsInterviewEnded] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState(state?.sessionId || null);
   const sessionIdRef = useRef(sessionId);
@@ -150,7 +153,7 @@ export default function Interview() {
     event.preventDefault();
 
     const content = input.trim();
-    if (!content || isSending || !hasStarted) return;
+    if (!content || isSending || isSuggesting || !hasStarted) return;
     if (countInterviewAnswerWords(content) < MINIMUM_INTERVIEW_ANSWER_WORDS) {
       setError("Please enter an answer of at least 3 words. Your message was not sent.");
       return;
@@ -202,6 +205,29 @@ export default function Interview() {
       );
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleSuggestAnswer = async () => {
+    const draft = input.trim();
+    if (!draft || isSending || isSuggesting || !hasStarted || !sessionId) return;
+
+    setError("");
+    setIsSuggesting(true);
+    try {
+      const response = await generateInterviewAnswerSuggestion(sessionId, draft);
+      if (typeof response.suggestion !== "string" || !response.suggestion.trim()) {
+        setError("The AI did not return an improved answer. Please try again.");
+        return;
+      }
+      setInput(response.suggestion.trim());
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.error ||
+          "The AI could not improve your answer right now. Please try again.",
+      );
+    } finally {
+      setIsSuggesting(false);
     }
   };
 
@@ -453,6 +479,29 @@ export default function Interview() {
           opacity: .55;
         }
 
+        .interview-suggest {
+          display: inline-flex;
+          flex: 0 0 auto;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-width: 146px;
+          min-height: 48px;
+          padding: 0 14px;
+          border: 1px solid rgba(139,124,246,.55);
+          border-radius: 12px;
+          background: rgba(139,124,246,.18);
+          color: #D8D1FF;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .interview-suggest:disabled {
+          cursor: progress;
+          opacity: .55;
+        }
+
         .interview-error {
           margin: 14px 0 0;
           color: #F88B85;
@@ -472,6 +521,8 @@ export default function Interview() {
           .interview-chat-page { padding: 20px 15px; }
           .interview-send { min-width: 52px; }
           .interview-send-label { display: none; }
+          .interview-suggest { min-width: 52px; padding: 0; }
+          .interview-suggest-label { display: none; }
         }
       `}</style>
 
@@ -581,9 +632,29 @@ export default function Interview() {
               }
             }}
             placeholder="Type your answer..."
-            disabled={isSending}
+            disabled={isSending || isSuggesting}
           />
-          <button className="interview-send" type="submit" disabled={isSending || !input.trim()}>
+          <button
+            className="interview-suggest"
+            type="button"
+            onClick={handleSuggestAnswer}
+            disabled={isSending || isSuggesting || !input.trim()}
+            aria-busy={isSuggesting}
+          >
+            {isSuggesting ? (
+              <LoaderCircle className="interview-loading" size={16} />
+            ) : (
+              <Sparkles size={16} />
+            )}
+            <span className="interview-suggest-label">
+              {isSuggesting ? "Generating..." : "Improve with AI"}
+            </span>
+          </button>
+          <button
+            className="interview-send"
+            type="submit"
+            disabled={isSending || isSuggesting || !input.trim()}
+          >
             <Send size={16} /><span className="interview-send-label">Send</span>
           </button>
         </form>
