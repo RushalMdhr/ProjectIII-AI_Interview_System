@@ -536,7 +536,7 @@ function Sidebar({ onLogout, section, onSectionChange }) {
 
         <div>
           <strong className="block text-sm font-bold tracking-wide text-[#F1F5F9]">
-            AI Interview 
+            AI Helper 
           </strong>
 
           <span className="text-[10px] font-semibold tracking-[.16em] text-[#8492A8]">
@@ -843,7 +843,7 @@ export default function AdminDashboard() {
           <footer className="mt-10 border-t border-[#253247] pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#64748B]">
               <span>
-                AI Interview Helper
+                AI Helper
               </span>
 
               <span>
